@@ -78,6 +78,10 @@ class FileShareViewModel(application: Application) : AndroidViewModel(applicatio
     init {
         // Load persisted settings
         _appSettings.value = settingsRepository.load()
+        
+        // Load persisted share config
+        _shareConfig.value = settingsRepository.loadShareConfig()
+
         // Sync server settings
         syncServerSettings()
 
@@ -141,7 +145,26 @@ class FileShareViewModel(application: Application) : AndroidViewModel(applicatio
         syncShareConfig()
     }
 
+    fun selectFiles(ids: Set<Long>) {
+        var config = _shareConfig.value
+        for (id in ids) {
+            config = config.addFile(id)
+        }
+        _shareConfig.value = config
+        syncShareConfig()
+    }
+
+    fun deselectFiles(ids: Set<Long>) {
+        var config = _shareConfig.value
+        for (id in ids) {
+            config = config.removeFile(id)
+        }
+        _shareConfig.value = config
+        syncShareConfig()
+    }
+
     private fun syncShareConfig() {
+        settingsRepository.saveShareConfig(_shareConfig.value)
         ServerForegroundService.updateShareConfig(_shareConfig.value)
     }
 

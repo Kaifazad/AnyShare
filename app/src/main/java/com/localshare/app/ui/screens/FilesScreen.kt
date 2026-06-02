@@ -341,17 +341,32 @@ fun FilesScreen(viewModel: FileShareViewModel) {
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    items(
-                        items = filteredFiles,
-                        key = { it.id }
-                    ) { file ->
-                        FileGridItem(
-                            file = file,
-                            isSelected = shareConfig.isFileSelected(file.id) ||
-                                    shareConfig.isCategoryEnabled(file.category),
-                            onToggle = { viewModel.toggleFile(file.id) },
-                            isCategoryEnabled = shareConfig.isCategoryEnabled(file.category)
-                        )
+                    val groupedFiles = filteredFiles.groupBy { it.parentFolderName }
+                    groupedFiles.forEach { (folderName, filesInFolder) ->
+                        item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(this.maxLineSpan) }) {
+                            FolderHeader(
+                                folderName = folderName,
+                                fileCount = filesInFolder.size,
+                                onSelectAll = {
+                                    viewModel.selectFiles(filesInFolder.map { it.id }.toSet())
+                                },
+                                onDeselectAll = {
+                                    viewModel.deselectFiles(filesInFolder.map { it.id }.toSet())
+                                }
+                            )
+                        }
+                        items(
+                            items = filesInFolder,
+                            key = { it.id }
+                        ) { file ->
+                            FileGridItem(
+                                file = file,
+                                isSelected = shareConfig.isFileSelected(file.id) ||
+                                        shareConfig.isCategoryEnabled(file.category),
+                                onToggle = { viewModel.toggleFile(file.id) },
+                                isCategoryEnabled = shareConfig.isCategoryEnabled(file.category)
+                            )
+                        }
                     }
                 }
             }
@@ -364,17 +379,32 @@ fun FilesScreen(viewModel: FileShareViewModel) {
                     ),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(
-                        items = filteredFiles,
-                        key = { it.id }
-                    ) { file ->
-                        FileItem(
-                            file = file,
-                            isSelected = shareConfig.isFileSelected(file.id) ||
-                                    shareConfig.isCategoryEnabled(file.category),
-                            onToggle = { viewModel.toggleFile(file.id) },
-                            isCategoryEnabled = shareConfig.isCategoryEnabled(file.category)
-                        )
+                    val groupedFiles = filteredFiles.groupBy { it.parentFolderName }
+                    groupedFiles.forEach { (folderName, filesInFolder) ->
+                        item(key = "header_$folderName") {
+                            FolderHeader(
+                                folderName = folderName,
+                                fileCount = filesInFolder.size,
+                                onSelectAll = {
+                                    viewModel.selectFiles(filesInFolder.map { it.id }.toSet())
+                                },
+                                onDeselectAll = {
+                                    viewModel.deselectFiles(filesInFolder.map { it.id }.toSet())
+                                }
+                            )
+                        }
+                        items(
+                            items = filesInFolder,
+                            key = { it.id }
+                        ) { file ->
+                            FileItem(
+                                file = file,
+                                isSelected = shareConfig.isFileSelected(file.id) ||
+                                        shareConfig.isCategoryEnabled(file.category),
+                                onToggle = { viewModel.toggleFile(file.id) },
+                                isCategoryEnabled = shareConfig.isCategoryEnabled(file.category)
+                            )
+                        }
                     }
 
                     item { Spacer(modifier = Modifier.height(80.dp)) }
@@ -708,4 +738,51 @@ private fun getCategoryIcon(category: FileCategory): ImageVector = when (categor
     FileCategory.DOWNLOADS -> Icons.Filled.Download
     FileCategory.APPS -> Icons.Filled.Android
     FileCategory.CUSTOM_FOLDERS -> Icons.Filled.Folder
+}
+
+// ─── Folder Header ───────────────────────────────────────────────
+
+@Composable
+private fun FolderHeader(
+    folderName: String,
+    fileCount: Int,
+    onSelectAll: () -> Unit,
+    onDeselectAll: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp, horizontal = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = folderName,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = "$fileCount items",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            androidx.compose.material3.TextButton(
+                onClick = onSelectAll,
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+            ) {
+                Text("Select All", style = MaterialTheme.typography.labelMedium)
+            }
+            androidx.compose.material3.TextButton(
+                onClick = onDeselectAll,
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+            ) {
+                Text("Clear", style = MaterialTheme.typography.labelMedium)
+            }
+        }
+    }
 }

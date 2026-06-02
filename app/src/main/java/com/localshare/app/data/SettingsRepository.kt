@@ -17,6 +17,8 @@ class SettingsRepository(context: Context) {
         private const val KEY_PIN = "pin"
         private const val KEY_DEVICE_NAME = "device_name"
         private const val KEY_MAX_CONNECTIONS = "max_connections"
+        private const val KEY_CUSTOM_FOLDERS = "custom_folders"
+        private const val KEY_CATEGORY_TOGGLES = "category_toggles"
 
         private val CUTE_ADJECTIVES = listOf(
             "Happy", "Fluffy", "Chill", "Turbo", "Cosmic",
@@ -78,6 +80,39 @@ class SettingsRepository(context: Context) {
             }
             putString(KEY_DEVICE_NAME, settings.deviceName)
             putInt(KEY_MAX_CONNECTIONS, settings.maxConnections)
+            apply()
+        }
+    }
+
+    /**
+     * Load share config from SharedPreferences.
+     */
+    fun loadShareConfig(): ShareConfig {
+        val customFolders = prefs.getStringSet(KEY_CUSTOM_FOLDERS, emptySet()) ?: emptySet()
+        val togglesSet = prefs.getStringSet(KEY_CATEGORY_TOGGLES, emptySet()) ?: emptySet()
+        
+        val categoryToggles = FileCategory.entries.associateWith { category ->
+            togglesSet.contains(category.name)
+        }
+
+        return ShareConfig(
+            categoryToggles = categoryToggles,
+            customFolderUris = customFolders
+        )
+    }
+
+    /**
+     * Save share config to SharedPreferences.
+     */
+    fun saveShareConfig(config: ShareConfig) {
+        val togglesSet = config.categoryToggles
+            .filter { it.value }
+            .map { it.key.name }
+            .toSet()
+
+        prefs.edit().apply {
+            putStringSet(KEY_CUSTOM_FOLDERS, config.customFolderUris)
+            putStringSet(KEY_CATEGORY_TOGGLES, togglesSet)
             apply()
         }
     }

@@ -45,6 +45,21 @@ data class SharedFile(
             mimeType.contains("apk") -> "android"
             else -> "file"
         }
+
+    val parentFolderName: String
+        get() {
+            if (category == FileCategory.CUSTOM_FOLDERS) {
+                // For custom folders, the name is formatted as "RootFolder/SubFolder/file.ext"
+                val parts = name.split("/")
+                return if (parts.size >= 2) parts[parts.size - 2] else "Folder"
+            }
+            // For MediaStore items, path is like /storage/emulated/0/DCIM/Camera/IMG.jpg
+            if (path.isNotBlank() && path.startsWith("/")) {
+                val parts = path.split("/")
+                if (parts.size >= 2) return parts[parts.size - 2]
+            }
+            return category.displayName
+        }
 }
 
 /**
