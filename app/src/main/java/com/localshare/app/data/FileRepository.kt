@@ -320,24 +320,8 @@ class FileRepository(private val context: Context) {
                 val documentFile = androidx.documentfile.provider.DocumentFile.fromTreeUri(context, treeUri)
                 
                 if (documentFile != null && documentFile.isDirectory) {
-                    val folderName = documentFile.name ?: "Folder"
-                    documentFile.listFiles().forEach { childFile ->
-                        if (childFile.isFile) {
-                            val mimeType = childFile.type ?: getMimeType(childFile.name ?: "")
-                            files.add(
-                                SharedFile(
-                                    id = childFile.uri.toString().hashCode().toLong(),
-                                    name = "${folderName}/${childFile.name ?: "Unknown"}",
-                                    path = childFile.uri.toString(),
-                                    uri = childFile.uri,
-                                    size = childFile.length(),
-                                    mimeType = mimeType,
-                                    category = FileCategory.CUSTOM_FOLDERS,
-                                    lastModified = childFile.lastModified()
-                                )
-                            )
-                        }
-                    }
+                    val rootFolderName = documentFile.name ?: "Folder"
+                    collectFilesRecursively(documentFile, rootFolderName, files)
                 }
             } catch (e: Exception) {
                 // Ignore inaccessible URIs
@@ -345,5 +329,32 @@ class FileRepository(private val context: Context) {
         }
         
         return files.sortedByDescending { it.lastModified }
+    }
+
+    private fun collectFilesRecursively(
+        folder: androidx.documentfile.provider.DocumentFile,
+        currentPath: String,
+        resultList: MutableList<SharedFile>
+    ) {
+        folder.listFiles().forEach { childFile ->
+            if (childFile.isFile) {
+                val mimeType = childFile.type ?: getMimeType(childFile.name ?: "")
+                resultList.add(
+                    SharedFile(
+                        id = childFile.uri.toString().hashCode().toLong(),
+                        name = "${currentPath}/${childFile.name ?: "Unknown"}",
+                        path = childFile.uri.toString(),
+                        uri = childFile.uri,
+                        size = childFile.length(),
+                        mimeType = mimeType,
+                        category = FileCategory.CUSTOM_FOLDERS,
+                        lastModified = childFile.lastModified()
+                    )
+                )
+            } else if (childFile.isDirectory) {
+                val nextPath = "${currentPath}/${childFile.name ?: "Folder"}"
+                collectFilesRecursively(childFile, nextPath, resultList)
+            }
+        }
     }
 }
