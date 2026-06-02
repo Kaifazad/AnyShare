@@ -40,6 +40,7 @@ import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.VideoFile
 import androidx.compose.material.icons.automirrored.filled.ViewList
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -101,6 +102,7 @@ fun FilesScreen(viewModel: FileShareViewModel) {
     var sortMode by remember { mutableStateOf("name") }
     var isGridView by remember { mutableStateOf(false) }
     var showSortMenu by remember { mutableStateOf(false) }
+    var selectedFolderName by remember { mutableStateOf<String?>(null) }
 
     val filteredFiles by remember(allFiles, searchQuery, selectedCategory, sortMode) {
         derivedStateOf {
@@ -175,7 +177,10 @@ fun FilesScreen(viewModel: FileShareViewModel) {
             item {
                 FilterChip(
                     selected = selectedCategory == null,
-                    onClick = { viewModel.setSelectedCategory(null) },
+                    onClick = { 
+                        viewModel.setSelectedCategory(null) 
+                        selectedFolderName = null
+                    },
                     label = { Text("All") },
                     shape = RoundedCornerShape(50),
                     colors = FilterChipDefaults.filterChipColors(
@@ -190,7 +195,10 @@ fun FilesScreen(viewModel: FileShareViewModel) {
                 val count = allFiles[category]?.size ?: 0
                 FilterChip(
                     selected = selectedCategory == category,
-                    onClick = { viewModel.setSelectedCategory(category) },
+                    onClick = { 
+                        viewModel.setSelectedCategory(category) 
+                        selectedFolderName = null
+                    },
                     label = {
                         Text("${category.displayName} ($count)")
                     },
@@ -206,116 +214,150 @@ fun FilesScreen(viewModel: FileShareViewModel) {
         Spacer(modifier = Modifier.height(8.dp))
 
         // ─── Controls Row (Compact & Professional) ──────────────
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Left side: Select All / Clear All (Pill Buttons)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                androidx.compose.material3.FilledTonalButton(
-                    onClick = {
-                        val category = selectedCategory
-                        if (category != null) {
-                            viewModel.selectAllInCategory(category)
-                        } else {
-                            FileCategory.entries.forEach { viewModel.selectAllInCategory(it) }
-                        }
-                    },
-                    modifier = Modifier.height(32.dp),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
-                ) {
-                    Icon(
-                        Icons.Filled.SelectAll,
-                        contentDescription = null,
-                        modifier = Modifier.size(14.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Select All", style = MaterialTheme.typography.labelMedium)
-                }
+        val isAppCategory = selectedCategory == FileCategory.APPS
+        val showFolderNavigation = !isAppCategory && selectedFolderName == null
 
-                androidx.compose.material3.OutlinedButton(
-                    onClick = {
-                        val category = selectedCategory
-                        if (category != null) {
-                            viewModel.deselectAllInCategory(category)
-                        } else {
-                            FileCategory.entries.forEach { viewModel.deselectAllInCategory(it) }
-                        }
-                    },
-                    modifier = Modifier.height(32.dp),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
-                ) {
-                    Text("Clear", style = MaterialTheme.typography.labelMedium)
-                }
+        val filesToDisplay = if (selectedFolderName != null) {
+            filteredFiles.filter { it.parentFolderName == selectedFolderName }
+        } else {
+            filteredFiles
+        }
+
+        if (selectedFolderName != null) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { selectedFolderName = null }
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Back to Folders",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
             }
-
-            // Right side: Sort + View toggle
-            Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                Box {
-                    IconButton(
-                        onClick = { showSortMenu = true },
-                        modifier = Modifier.size(32.dp)
+        } else {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Left side: Select All / Clear All (Pill Buttons)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    androidx.compose.material3.FilledTonalButton(
+                        onClick = {
+                            val category = selectedCategory
+                            if (category != null) {
+                                viewModel.selectAllInCategory(category)
+                            } else {
+                                FileCategory.entries.forEach { viewModel.selectAllInCategory(it) }
+                            }
+                        },
+                        modifier = Modifier.height(32.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
                     ) {
                         Icon(
-                            Icons.AutoMirrored.Filled.Sort,
-                            contentDescription = "Sort",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(22.dp)
+                            Icons.Filled.SelectAll,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp)
                         )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Select All", style = MaterialTheme.typography.labelMedium)
                     }
-                    MaterialTheme(shapes = MaterialTheme.shapes.copy(extraSmall = RoundedCornerShape(12.dp))) {
-                        DropdownMenu(
-                            expanded = showSortMenu,
-                            onDismissRequest = { showSortMenu = false },
-                            modifier = Modifier.background(MaterialTheme.colorScheme.surface)
+
+                    androidx.compose.material3.OutlinedButton(
+                        onClick = {
+                            val category = selectedCategory
+                            if (category != null) {
+                                viewModel.deselectAllInCategory(category)
+                            } else {
+                                FileCategory.entries.forEach { viewModel.deselectAllInCategory(it) }
+                            }
+                        },
+                        modifier = Modifier.height(32.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
+                    ) {
+                        Text("Clear", style = MaterialTheme.typography.labelMedium)
+                    }
+                }
+
+                // Right side: Sort + View toggle
+                if (!showFolderNavigation) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Box {
+                            IconButton(
+                                onClick = { showSortMenu = true },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.Sort,
+                                    contentDescription = "Sort",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+                            MaterialTheme(shapes = MaterialTheme.shapes.copy(extraSmall = RoundedCornerShape(12.dp))) {
+                                DropdownMenu(
+                                    expanded = showSortMenu,
+                                    onDismissRequest = { showSortMenu = false },
+                                    modifier = Modifier.background(MaterialTheme.colorScheme.surface)
+                                ) {
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                "Name",
+                                                fontWeight = if (sortMode == "name") FontWeight.Bold else FontWeight.Normal
+                                            )
+                                        },
+                                        onClick = { sortMode = "name"; showSortMenu = false }
+                                    )
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                "Size",
+                                                fontWeight = if (sortMode == "size") FontWeight.Bold else FontWeight.Normal
+                                            )
+                                        },
+                                        onClick = { sortMode = "size"; showSortMenu = false }
+                                    )
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                "Date",
+                                                fontWeight = if (sortMode == "date") FontWeight.Bold else FontWeight.Normal
+                                            )
+                                        },
+                                        onClick = { sortMode = "date"; showSortMenu = false }
+                                    )
+                                }
+                            }
+                        }
+
+                        IconButton(
+                            onClick = { isGridView = !isGridView },
+                            modifier = Modifier.size(32.dp)
                         ) {
-                            DropdownMenuItem(
-                                text = {
-                                    Text(
-                                        "Name",
-                                        fontWeight = if (sortMode == "name") FontWeight.Bold else FontWeight.Normal
-                                    )
-                                },
-                                onClick = { sortMode = "name"; showSortMenu = false }
-                            )
-                            DropdownMenuItem(
-                                text = {
-                                    Text(
-                                        "Size",
-                                        fontWeight = if (sortMode == "size") FontWeight.Bold else FontWeight.Normal
-                                    )
-                                },
-                                onClick = { sortMode = "size"; showSortMenu = false }
-                            )
-                            DropdownMenuItem(
-                                text = {
-                                    Text(
-                                        "Date",
-                                        fontWeight = if (sortMode == "date") FontWeight.Bold else FontWeight.Normal
-                                    )
-                                },
-                                onClick = { sortMode = "date"; showSortMenu = false }
+                            Icon(
+                                imageVector = if (isGridView) Icons.AutoMirrored.Filled.ViewList else Icons.Filled.GridView,
+                                contentDescription = "Toggle View",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(20.dp)
                             )
                         }
                     }
                 }
-
-                    IconButton(
-                        onClick = { isGridView = !isGridView },
-                        modifier = Modifier.size(32.dp)
-                    ) {
-                        Icon(
-                            imageVector = if (isGridView) Icons.AutoMirrored.Filled.ViewList else Icons.Filled.GridView,
-                            contentDescription = "Toggle View",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
             }
+        }
 
         Spacer(modifier = Modifier.height(12.dp))
 
@@ -334,6 +376,35 @@ fun FilesScreen(viewModel: FileShareViewModel) {
                 EmptyFilesState(hasSearch = searchQuery.isNotBlank())
             }
 
+            showFolderNavigation && filesToDisplay.isNotEmpty() -> {
+                LazyColumn(
+                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    val groupedFiles = filesToDisplay.groupBy { it.parentFolderName }
+                    items(
+                        items = groupedFiles.entries.toList(),
+                        key = { it.key }
+                    ) { (folderName, filesInFolder) ->
+                        FolderListItem(
+                            folderName = folderName,
+                            fileCount = filesInFolder.size,
+                            isSelected = filesInFolder.all { shareConfig.isFileSelected(it.id) || shareConfig.isCategoryEnabled(it.category) },
+                            onToggleSelect = {
+                                val allSelected = filesInFolder.all { shareConfig.isFileSelected(it.id) || shareConfig.isCategoryEnabled(it.category) }
+                                if (allSelected) {
+                                    viewModel.deselectFiles(filesInFolder.map { it.id }.toSet())
+                                } else {
+                                    viewModel.selectFiles(filesInFolder.map { it.id }.toSet())
+                                }
+                            },
+                            onClick = { selectedFolderName = folderName }
+                        )
+                    }
+                    item { Spacer(modifier = Modifier.height(80.dp)) }
+                }
+            }
+
             isGridView -> {
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(2),
@@ -341,32 +412,17 @@ fun FilesScreen(viewModel: FileShareViewModel) {
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    val groupedFiles = filteredFiles.groupBy { it.parentFolderName }
-                    groupedFiles.forEach { (folderName, filesInFolder) ->
-                        item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(this.maxLineSpan) }) {
-                            FolderHeader(
-                                folderName = folderName,
-                                fileCount = filesInFolder.size,
-                                onSelectAll = {
-                                    viewModel.selectFiles(filesInFolder.map { it.id }.toSet())
-                                },
-                                onDeselectAll = {
-                                    viewModel.deselectFiles(filesInFolder.map { it.id }.toSet())
-                                }
-                            )
-                        }
-                        items(
-                            items = filesInFolder,
-                            key = { it.id }
-                        ) { file ->
-                            FileGridItem(
-                                file = file,
-                                isSelected = shareConfig.isFileSelected(file.id) ||
-                                        shareConfig.isCategoryEnabled(file.category),
-                                onToggle = { viewModel.toggleFile(file.id) },
-                                isCategoryEnabled = shareConfig.isCategoryEnabled(file.category)
-                            )
-                        }
+                    items(
+                        items = filesToDisplay,
+                        key = { it.id }
+                    ) { file ->
+                        FileGridItem(
+                            file = file,
+                            isSelected = shareConfig.isFileSelected(file.id) ||
+                                    shareConfig.isCategoryEnabled(file.category),
+                            onToggle = { viewModel.toggleFile(file.id) },
+                            isCategoryEnabled = shareConfig.isCategoryEnabled(file.category)
+                        )
                     }
                 }
             }
@@ -379,32 +435,17 @@ fun FilesScreen(viewModel: FileShareViewModel) {
                     ),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    val groupedFiles = filteredFiles.groupBy { it.parentFolderName }
-                    groupedFiles.forEach { (folderName, filesInFolder) ->
-                        item(key = "header_$folderName") {
-                            FolderHeader(
-                                folderName = folderName,
-                                fileCount = filesInFolder.size,
-                                onSelectAll = {
-                                    viewModel.selectFiles(filesInFolder.map { it.id }.toSet())
-                                },
-                                onDeselectAll = {
-                                    viewModel.deselectFiles(filesInFolder.map { it.id }.toSet())
-                                }
-                            )
-                        }
-                        items(
-                            items = filesInFolder,
-                            key = { it.id }
-                        ) { file ->
-                            FileItem(
-                                file = file,
-                                isSelected = shareConfig.isFileSelected(file.id) ||
-                                        shareConfig.isCategoryEnabled(file.category),
-                                onToggle = { viewModel.toggleFile(file.id) },
-                                isCategoryEnabled = shareConfig.isCategoryEnabled(file.category)
-                            )
-                        }
+                    items(
+                        items = filesToDisplay,
+                        key = { it.id }
+                    ) { file ->
+                        FileItem(
+                            file = file,
+                            isSelected = shareConfig.isFileSelected(file.id) ||
+                                    shareConfig.isCategoryEnabled(file.category),
+                            onToggle = { viewModel.toggleFile(file.id) },
+                            isCategoryEnabled = shareConfig.isCategoryEnabled(file.category)
+                        )
                     }
 
                     item { Spacer(modifier = Modifier.height(80.dp)) }
@@ -782,6 +823,87 @@ private fun FolderHeader(
                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
             ) {
                 Text("Clear", style = MaterialTheme.typography.labelMedium)
+            }
+        }
+    }
+}
+
+// ─── Folder List Item (For Navigation) ───────────────────────────
+
+@Composable
+private fun FolderListItem(
+    folderName: String,
+    fileCount: Int,
+    isSelected: Boolean,
+    onToggleSelect: () -> Unit,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .clickable { onClick() },
+        colors = CardDefaults.cardColors(
+            containerColor = if (isSelected)
+                MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
+            else
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+        ),
+        shape = RoundedCornerShape(14.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Folder Icon
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Folder,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            // Folder info
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = folderName,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "$fileCount items",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            // Checkbox
+            IconButton(onClick = onToggleSelect) {
+                Icon(
+                    imageVector = if (isSelected)
+                        Icons.Filled.CheckBox
+                    else
+                        Icons.Filled.CheckBoxOutlineBlank,
+                    contentDescription = if (isSelected) "Selected" else "Not selected",
+                    tint = if (isSelected)
+                        MaterialTheme.colorScheme.primary
+                    else
+                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                    modifier = Modifier.size(26.dp)
+                )
             }
         }
     }
