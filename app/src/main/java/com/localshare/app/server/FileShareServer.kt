@@ -117,8 +117,9 @@ class FileShareServer(
             // ─── PIN gate ───────────────────────────────────────
             val currentPin = pin
             if (currentPin != null && !isAuthenticated(ip)) {
-                // Allow the main page (serves PIN entry UI) and favicon
-                if (uri != "/" && uri != "/index.html" && uri != "/favicon.ico") {
+                // Allow the main page (serves PIN entry UI) and icons
+                val allowedPaths = setOf("/", "/index.html", "/favicon.ico", "/logo.png", "/logo-dark.png")
+                if (uri !in allowedPaths && uri != "/api/auth") {
                     return newFixedLengthResponse(
                         Response.Status.UNAUTHORIZED,
                         "application/json",

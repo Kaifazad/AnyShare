@@ -256,7 +256,7 @@ fun HomeScreen(viewModel: FileShareViewModel) {
                             val uri = Uri.parse(uriString)
                             val docFile = DocumentFile.fromTreeUri(context, uri)
                             docFile?.name ?: "Unknown Folder"
-                        } catch (e: Exception) {
+                        } catch (_: Exception) {
                             "Unknown Folder"
                         }
 
