@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import com.localshare.app.ui.utils.bounceScale
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Download
@@ -41,10 +43,10 @@ data class RemoteFile(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ReceiveBottomSheet(onDismiss: () -> Unit) {
+fun ReceiveBottomSheet(initialUrl: String? = null, onDismiss: () -> Unit) {
     val context = LocalContext.current
     
-    var serverUrl by remember { mutableStateOf("") }
+    var serverUrl by remember { mutableStateOf(initialUrl ?: "") }
     var remoteFiles by remember { mutableStateOf<List<RemoteFile>>(emptyList()) }
     var isLoading by remember { mutableStateOf(false) }
     var errorMsg by remember { mutableStateOf<String?>(null) }
@@ -52,22 +54,36 @@ fun ReceiveBottomSheet(onDismiss: () -> Unit) {
     var showPinDialog by remember { mutableStateOf(false) }
     var pinInput by remember { mutableStateOf("") }
 
+    val connectToServer = { urlToConnect: String ->
+        val url = if (urlToConnect.endsWith("/")) urlToConnect.dropLast(1) else urlToConnect
+        val finalUrl = if (!url.startsWith("http")) "http://$url" else url
+        serverUrl = finalUrl
+        
+        isLoading = true
+        fetchFiles(finalUrl) { files, error ->
+            isLoading = false
+            if (error == "401") {
+                showPinDialog = true
+            } else if (error != null) {
+                errorMsg = error
+                isConnected = false
+            } else {
+                remoteFiles = files
+                isConnected = true
+                errorMsg = null
+            }
+        }
+    }
+
+    androidx.compose.runtime.LaunchedEffect(initialUrl) {
+        if (!initialUrl.isNullOrEmpty()) {
+            connectToServer(initialUrl)
+        }
+    }
+
     val scanLauncher = rememberLauncherForActivityResult(ScanContract()) { result ->
         if (result.contents != null) {
-            val scannedUrl = result.contents
-            serverUrl = if (scannedUrl.endsWith("/")) scannedUrl.dropLast(1) else scannedUrl
-            fetchFiles(serverUrl) { files, error ->
-                if (error == "401") {
-                    showPinDialog = true
-                } else if (error != null) {
-                    errorMsg = error
-                    isConnected = false
-                } else {
-                    remoteFiles = files
-                    isConnected = true
-                    errorMsg = null
-                }
-            }
+            connectToServer(result.contents)
         }
     }
 
@@ -138,27 +154,7 @@ fun ReceiveBottomSheet(onDismiss: () -> Unit) {
                 
                 Button(
                     onClick = {
-                        val url = if (serverUrl.endsWith("/")) serverUrl.dropLast(1) else serverUrl
-                        if (!url.startsWith("http")) {
-                            serverUrl = "http://$url"
-                        } else {
-                            serverUrl = url
-                        }
-                        
-                        isLoading = true
-                        fetchFiles(serverUrl) { files, error ->
-                            isLoading = false
-                            if (error == "401") {
-                                showPinDialog = true
-                            } else if (error != null) {
-                                errorMsg = error
-                                isConnected = false
-                            } else {
-                                remoteFiles = files
-                                isConnected = true
-                                errorMsg = null
-                            }
-                        }
+                        connectToServer(serverUrl)
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -253,7 +249,8 @@ fun ReceiveBottomSheet(onDismiss: () -> Unit) {
                         items(remoteFiles) { file ->
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
-                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                                shape = RoundedCornerShape(20.dp)
                             ) {
                                 Row(
                                     modifier = Modifier.padding(16.dp),
@@ -273,10 +270,13 @@ fun ReceiveBottomSheet(onDismiss: () -> Unit) {
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
+                                    val interactionSource = remember { MutableInteractionSource() }
                                     IconButton(
                                         onClick = {
                                             downloadFile(context, file.downloadUrl, file.name)
                                         },
+                                        modifier = Modifier.bounceScale(interactionSource),
+                                        interactionSource = interactionSource,
                                         colors = IconButtonDefaults.iconButtonColors(
                                             containerColor = MaterialTheme.colorScheme.primaryContainer
                                         )

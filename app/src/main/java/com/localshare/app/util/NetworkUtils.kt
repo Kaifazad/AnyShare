@@ -5,6 +5,7 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.wifi.WifiManager
 import java.net.Inet4Address
+import java.net.InetAddress
 import java.net.NetworkInterface
 import java.util.Collections
 
@@ -58,6 +59,19 @@ object NetworkUtils {
         } catch (_: Exception) { }
 
         return "0.0.0.0"
+    }
+
+    /**
+     * Finds the NetworkInterface associated with Wi-Fi.
+     */
+    fun getWifiNetworkInterface(context: Context): NetworkInterface? {
+        val ip = getLocalIpAddress(context)
+        if (ip == "0.0.0.0") return null
+        try {
+            val inetAddr = InetAddress.getByName(ip)
+            return NetworkInterface.getByInetAddress(inetAddr)
+        } catch (_: Exception) {}
+        return null
     }
 
     /**

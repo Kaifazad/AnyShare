@@ -26,8 +26,9 @@ enum class ColorPalette(val displayName: String, val previewColor: Long) {
  */
 data class AppSettings(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
-    val colorPalette: ColorPalette = ColorPalette.SYSTEM,
+    val colorPalette: ColorPalette = ColorPalette.OCEAN,
     val pin: String? = null,          // null = disabled, "1234" = active
     val deviceName: String = "",      // Auto-generated cute name
-    val maxConnections: Int = 3       // 1..5 simultaneous browser connections
+    val maxConnections: Int = 3,      // 1..5 simultaneous browser connections
+    val enableNearbyDiscovery: Boolean = true
 )

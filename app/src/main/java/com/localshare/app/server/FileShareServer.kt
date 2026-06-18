@@ -30,6 +30,8 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.media.MediaMetadataRetriever
 import android.util.LruCache
+import android.net.Uri
+import androidx.documentfile.provider.DocumentFile
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -42,6 +44,7 @@ import kotlinx.coroutines.launch
  *   GET /api/files         → JSON listing of shared files
  *   GET /api/status        → Server status + connected device count
  *   POST /api/auth         → PIN authentication
+ *   POST /api/upload       → Receive files from browser (laptop-to-phone)
  *   GET /download/{fileId} → Full file download
  *   GET /stream/{fileId}   → Stream with Range request support
  */
@@ -81,6 +84,13 @@ class FileShareServer(
     @Volatile
     var maxConnections: Int = 3
 
+    // ─── Clipboard Sync ────────────────────────────────────────
+    @Volatile
+    private var systemClipboard: String = ""
+    private var sharedText: String = ""
+    @Suppress("unused")
+    private var phoneClipboardVersion: Long = 0
+
     // ─── File list cache (avoids runBlocking deadlock under load) ────
     @Volatile
     private var cachedFiles: List<SharedFile> = emptyList()
@@ -88,12 +98,7 @@ class FileShareServer(
     private var cacheTime: Long = 0
 
     private fun getCachedFiles(): List<SharedFile> {
-        val now = System.currentTimeMillis()
-        if (now - cacheTime > 3000) { // refresh every 3 seconds
-            cachedFiles = runBlocking { fileRepository.getSharedFiles(shareConfig) }
-            cacheTime = now
-        }
-        return cachedFiles
+        return shareConfig.sharedFiles
     }
 
     override fun serve(session: IHTTPSession): Response {
@@ -141,11 +146,14 @@ class FileShareServer(
                 uri == "/" || uri == "/index.html" -> serveWebUI()
                 uri == "/api/files" -> serveFileList(session)
                 uri == "/api/status" -> serveStatus()
+                uri == "/api/clipboard" && method == Method.GET -> serveClipboard()
+                uri == "/api/clipboard" && method == Method.POST -> handleSetClipboard(session)
                 uri.startsWith("/download/") -> serveDownload(session, uri, ip)
                 uri.startsWith("/stream/") -> serveStream(session, uri, ip)
                 uri.startsWith("/api/thumbnail/") -> serveThumbnail(session, uri)
                 uri.startsWith("/api/icon/") -> serveAppIcon(session, uri)
                 uri == "/api/download-zip" -> serveZip(session, ip)
+                uri == "/api/upload" && method == Method.POST -> handleUpload(session, ip)
                 uri == "/favicon.ico" -> serveFavicon()
                 uri == "/logo.png" -> serveLogo()
                 uri == "/logo-dark.png" -> serveLogoDark()
@@ -205,11 +213,198 @@ class FileShareServer(
 
     // ─── Route Handlers ─────────────────────────────────────────
 
+    // ─── Clipboard Sync Handlers ────────────────────────────────
+
+    /**
+     * Update the system clipboard text from the Android side.
+     * Called periodically by the ViewModel to keep the server aware of clipboard changes.
+     * This will NOT overwrite explicitly shared text.
+     */
+    fun updatePhoneClipboard(text: String) {
+        if (text != systemClipboard) {
+            systemClipboard = text
+            // Only bump version if there's no explicit shared text taking priority
+            if (sharedText.isEmpty()) {
+                phoneClipboardVersion++
+            }
+        }
+    }
+
+    /**
+     * Set text explicitly shared by the user from the app's share dialog.
+     * This takes priority over the system clipboard.
+     */
+    fun setSharedText(text: String) {
+        sharedText = text
+        phoneClipboardVersion++
+    }
+
+    /**
+     * GET /api/clipboard — returns both system clipboard and shared text separately.
+     */
+    private fun serveClipboard(): Response {
+        val json = JSONObject().apply {
+            put("text", systemClipboard)
+            put("sharedText", sharedText)
+            put("version", phoneClipboardVersion)
+        }
+        return newFixedLengthResponse(
+            Response.Status.OK,
+            "application/json",
+            json.toString()
+        ).also {
+            it.addHeader("Access-Control-Allow-Origin", "*")
+        }
+    }
+
+    /**
+     * POST /api/clipboard — receives clipboard text from the laptop
+     * and sets it on the phone's clipboard.
+     */
+    private fun handleSetClipboard(session: IHTTPSession): Response {
+        val bodyMap = HashMap<String, String>()
+        try {
+            session.parseBody(bodyMap)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error parsing clipboard body", e)
+        }
+
+        val body = bodyMap["postData"] ?: ""
+        val text = try {
+            JSONObject(body).optString("text", "")
+        } catch (e: Exception) {
+            ""
+        }
+
+        if (text.isNotEmpty()) {
+            // Set clipboard on the main (UI) thread
+            android.os.Handler(android.os.Looper.getMainLooper()).post {
+                try {
+                    val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE)
+                        as android.content.ClipboardManager
+                    val clip = android.content.ClipData.newPlainText("LocalShare", text)
+                    clipboard.setPrimaryClip(clip)
+                    Log.d(TAG, "Clipboard set from laptop: ${text.take(50)}...")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to set clipboard", e)
+                }
+            }
+        }
+
+        val json = JSONObject().apply {
+            put("success", true)
+        }
+        return newFixedLengthResponse(
+            Response.Status.OK,
+            "application/json",
+            json.toString()
+        ).also {
+            it.addHeader("Access-Control-Allow-Origin", "*")
+        }
+    }
+
     private fun serveWebUI(): Response {
         val needsAuth = pin != null
         val html = WebUI.getHtml(deviceName, needsAuth)
         return newFixedLengthResponse(Response.Status.OK, "text/html", html).also {
             it.addHeader("Cache-Control", "no-cache")
+        }
+    }
+
+    // ─── Upload Handler (Laptop → Phone) ────────────────────────
+
+    val newUploadedFiles = kotlinx.coroutines.flow.MutableSharedFlow<File>(extraBufferCapacity = 100)
+
+    private fun handleUpload(session: IHTTPSession, ip: String): Response {
+        try {
+            // NanoHTTPD requires parsing the body to get temp files
+            val bodyMap = HashMap<String, String>()
+            session.parseBody(bodyMap)
+
+            val downloadsDir = android.os.Environment.getExternalStoragePublicDirectory(
+                android.os.Environment.DIRECTORY_DOWNLOADS
+            )
+            val localShareDir = File(downloadsDir, "LocalShare")
+            if (!localShareDir.exists()) localShareDir.mkdirs()
+
+            val uploadedFiles = mutableListOf<String>()
+
+            // NanoHTTPD stores uploaded files as temp files
+            // The temp file path is in bodyMap values
+            // File metadata comes from session.parameters
+            val params = session.parameters
+            val fileNames = params["filename"] ?: emptyList()
+
+            // For multipart/form-data, NanoHTTPD puts temp paths in bodyMap
+            for ((key, tempPath) in bodyMap) {
+                if (key == "postData") continue
+                val tempFile = File(tempPath)
+                if (!tempFile.exists()) continue
+
+                // Get original filename from parameters, or use temp name
+                val originalName = fileNames.firstOrNull() ?: "upload_${System.currentTimeMillis()}"
+                val destFile = File(localShareDir, originalName)
+
+                // Handle duplicate names
+                val finalDest = if (destFile.exists()) {
+                    val base = destFile.nameWithoutExtension
+                    val ext = destFile.extension
+                    var counter = 1
+                    var candidate: File
+                    do {
+                        candidate = File(localShareDir, "${base}_${counter}.${ext}")
+                        counter++
+                    } while (candidate.exists())
+                    candidate
+                } else destFile
+
+                tempFile.copyTo(finalDest, overwrite = true)
+                uploadedFiles.add(finalDest.name)
+                newUploadedFiles.tryEmit(finalDest)
+
+                // Notify the media scanner so it shows up in gallery/files
+                android.media.MediaScannerConnection.scanFile(
+                    context,
+                    arrayOf(finalDest.absolutePath),
+                    null,
+                    null
+                )
+
+                Log.d(TAG, "Received file: ${finalDest.name} from $ip")
+
+                accessLog.add(
+                    AccessLogEntry(
+                        ip = ip,
+                        filename = finalDest.name,
+                        action = AccessAction.UPLOAD
+                    )
+                )
+            }
+
+
+
+            val json = JSONObject().apply {
+                put("success", true)
+                put("files", JSONArray(uploadedFiles))
+                put("message", "${uploadedFiles.size} file(s) received")
+            }
+
+            return newFixedLengthResponse(
+                Response.Status.OK,
+                "application/json",
+                json.toString()
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "Upload error", e)
+            val json = JSONObject().apply {
+                put("success", false)
+                put("error", e.message ?: "Upload failed")
+            }
+            return newFixedLengthResponse(
+                Response.Status.INTERNAL_ERROR,
+                "application/json",
+                json.toString()
+            )
         }
     }
 
@@ -228,15 +423,28 @@ class FileShareServer(
 
         val jsonArray = JSONArray()
         for (file in filtered) {
+            val resolvedMime = resolveStreamMimeType(file.name, file.mimeType)
+            val isStreamable = resolvedMime.startsWith("video/") || resolvedMime.startsWith("audio/") || resolvedMime.startsWith("image/")
+            val typeIcon = when {
+                resolvedMime.startsWith("video/") -> "video"
+                resolvedMime.startsWith("image/") -> "image"
+                resolvedMime.startsWith("audio/") -> "audio"
+                resolvedMime.startsWith("text/") -> "document"
+                resolvedMime.contains("pdf") -> "pdf"
+                resolvedMime.contains("zip") || resolvedMime.contains("rar") || resolvedMime.contains("tar") -> "archive"
+                resolvedMime.contains("apk") -> "android"
+                else -> "file"
+            }
+            
             val obj = JSONObject().apply {
                 put("id", file.id)
                 put("name", file.name)
                 put("size", file.size)
                 put("formattedSize", file.formattedSize)
-                put("mimeType", file.mimeType)
+                put("mimeType", resolvedMime)
                 put("category", file.category.name.lowercase())
-                put("typeIcon", file.typeIcon)
-                put("isStreamable", file.isStreamable)
+                put("typeIcon", typeIcon)
+                put("isStreamable", isStreamable)
                 put("lastModified", file.lastModified)
             }
             jsonArray.put(obj)
@@ -281,16 +489,43 @@ class FileShareServer(
 
         accessLog.add(AccessLogEntry(ip, file.name, AccessAction.DOWNLOAD))
 
-        // Try file path first, then content URI
+        // Virtual Text Files (pasted text) — not resumable
+        if (file.mimeType == "text/plain" && file.path.startsWith("virtual://")) {
+            val textContent = file.path.removePrefix("virtual://")
+            val bytes = textContent.toByteArray()
+            val response = newFixedLengthResponse(Response.Status.OK, "text/plain", ByteArrayInputStream(bytes), bytes.size.toLong())
+            response.addHeader("Content-Disposition", "attachment; filename=\"${file.name}\"")
+            return response
+        }
+
+        // Folder ZIP Streaming — not resumable (streamed on-the-fly)
+        if (file.mimeType == "application/x-directory") {
+            val pos = PipedOutputStream()
+            val pis = PipedInputStream(pos, 65536)
+
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    ZipOutputStream(pos).use { zos ->
+                        zipFolder(context, file.uri, zos, "${file.name}/")
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error zipping folder: ${file.name}", e)
+                }
+            }
+
+            val res = newChunkedResponse(Response.Status.OK, "application/zip", pis)
+            res.addHeader("Content-Disposition", "attachment; filename=\"${file.name}.zip\"")
+            return res
+        }
+
+        // ─── Resumable Downloads via Range Requests ─────────────
+        val rangeHeader = session.headers?.get("range")
+        val resolvedMimeType = resolveStreamMimeType(file.name, file.mimeType)
+
+        // Try file path first (supports efficient seeking)
         val physicalFile = File(file.path)
         return if (physicalFile.exists() && physicalFile.canRead()) {
-            val bounded = BoundedInputStream(FileInputStream(physicalFile), physicalFile.length())
-            val response = newFixedLengthResponse(
-                Response.Status.OK,
-                file.mimeType,
-                bounded,
-                physicalFile.length()
-            )
+            val response = RangeRequestHandler.createResponse(physicalFile, resolvedMimeType, rangeHeader)
             response.addHeader("Content-Disposition", "attachment; filename=\"${file.name}\"")
             response
         } else {
@@ -298,18 +533,31 @@ class FileShareServer(
             try {
                 val inputStream = context.contentResolver.openInputStream(file.uri)
                     ?: return notFound()
-                val bounded = BoundedInputStream(inputStream, file.size)
-                val response = newFixedLengthResponse(
-                    Response.Status.OK,
-                    file.mimeType,
-                    bounded,
-                    file.size
+                val response = RangeRequestHandler.createResponseFromStream(
+                    inputStream, file.size, resolvedMimeType, rangeHeader
                 )
                 response.addHeader("Content-Disposition", "attachment; filename=\"${file.name}\"")
                 response
             } catch (e: Exception) {
                 Log.e(TAG, "Error opening file for download: ${file.name}", e)
                 notFound()
+            }
+        }
+    }
+
+    private fun zipFolder(context: Context, treeUri: Uri, zos: ZipOutputStream, basePath: String) {
+        val documentFile = DocumentFile.fromTreeUri(context, treeUri) ?: return
+        documentFile.listFiles().forEach { file ->
+            if (file.isDirectory) {
+                zipFolder(context, file.uri, zos, "$basePath${file.name}/")
+            } else {
+                val entryName = "$basePath${file.name}"
+                val entry = ZipEntry(entryName)
+                zos.putNextEntry(entry)
+                context.contentResolver.openInputStream(file.uri)?.use { fis ->
+                    fis.copyTo(zos, 65536)
+                }
+                zos.closeEntry()
             }
         }
     }

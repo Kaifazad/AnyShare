@@ -3,7 +3,9 @@ package com.localshare.app.ui.theme
 import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
@@ -16,10 +18,65 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.font.FontVariation
+import androidx.compose.ui.text.ExperimentalTextApi
+import androidx.compose.ui.text.googlefonts.Font
+import androidx.compose.ui.text.googlefonts.GoogleFont
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
+import com.localshare.app.R
 import com.localshare.app.data.ColorPalette
+
+// Google Sans Flex variable font with rounded axis for Google Sans Rounded-like appearance.
+private const val GoogleSansFlexRond = 100f
+
+@OptIn(ExperimentalTextApi::class)
+val GoogleSansRounded = FontFamily(
+    androidx.compose.ui.text.font.Font(
+        resId = R.font.gflex_variable,
+        weight = FontWeight.Light,
+        variationSettings = FontVariation.Settings(
+            FontVariation.weight(FontWeight.Light.weight),
+            FontVariation.Setting("ROND", GoogleSansFlexRond)
+        )
+    ),
+    androidx.compose.ui.text.font.Font(
+        resId = R.font.gflex_variable,
+        weight = FontWeight.Normal,
+        variationSettings = FontVariation.Settings(
+            FontVariation.weight(FontWeight.Normal.weight),
+            FontVariation.Setting("ROND", GoogleSansFlexRond)
+        )
+    ),
+    androidx.compose.ui.text.font.Font(
+        resId = R.font.gflex_variable,
+        weight = FontWeight.Medium,
+        variationSettings = FontVariation.Settings(
+            FontVariation.weight(FontWeight.Medium.weight),
+            FontVariation.Setting("ROND", GoogleSansFlexRond)
+        )
+    ),
+    androidx.compose.ui.text.font.Font(
+        resId = R.font.gflex_variable,
+        weight = FontWeight.SemiBold,
+        variationSettings = FontVariation.Settings(
+            FontVariation.weight(FontWeight.SemiBold.weight),
+            FontVariation.Setting("ROND", GoogleSansFlexRond)
+        )
+    ),
+    androidx.compose.ui.text.font.Font(
+        resId = R.font.gflex_variable,
+        weight = FontWeight.Bold,
+        variationSettings = FontVariation.Settings(
+            FontVariation.weight(FontWeight.Bold.weight),
+            FontVariation.Setting("ROND", GoogleSansFlexRond)
+        )
+    ),
+)
 
 // ─── Custom Color Palette ─────────────────────────────────────────
 
@@ -61,6 +118,8 @@ private val LocalShareDarkScheme = darkColorScheme(
     onBackground = DarkOnSurface,
     onSurface = DarkOnSurface,
     onSurfaceVariant = DarkOnSurfaceVariant,
+    surfaceContainer = DarkSurfaceVariant,
+    surfaceContainerHigh = Color(0xFF1E1E1E),
     error = ErrorRed,
     outline = Color(0xFF333333),
     outlineVariant = Color(0xFF1F1F1F)
@@ -82,6 +141,8 @@ private val LocalShareLightScheme = lightColorScheme(
     onBackground = LightOnSurface,
     onSurface = LightOnSurface,
     onSurfaceVariant = LightOnSurfaceVariant,
+    surfaceContainer = LightSurfaceVariant,
+    surfaceContainerHigh = Color(0xFFE0E0E0),
     error = ErrorRed,
     outline = Color(0xFFCCCCCC),
     outlineVariant = Color(0xFFE0E0E0)
@@ -105,6 +166,8 @@ private val OceanDarkScheme = darkColorScheme(
     onBackground = Color(0xFFDDE3EA),
     onSurface = Color(0xFFDDE3EA),
     onSurfaceVariant = Color(0xFF8FA4B8),
+    surfaceContainer = Color(0xFF162028),
+    surfaceContainerHigh = Color(0xFF1E2C38),
     error = ErrorRed,
     outline = Color(0xFF2C3E50),
     outlineVariant = Color(0xFF1A2836)
@@ -126,6 +189,8 @@ private val OceanLightScheme = lightColorScheme(
     onBackground = Color(0xFF0D1B2A),
     onSurface = Color(0xFF0D1B2A),
     onSurfaceVariant = Color(0xFF44566C),
+    surfaceContainer = Color(0xFFE1E8F0),
+    surfaceContainerHigh = Color(0xFFD0DCE6),
     error = ErrorRed,
     outline = Color(0xFFB0BEC5),
     outlineVariant = Color(0xFFCFD8DC)
@@ -149,6 +214,8 @@ private val EmeraldDarkScheme = darkColorScheme(
     onBackground = Color(0xFFDBE5DC),
     onSurface = Color(0xFFDBE5DC),
     onSurfaceVariant = Color(0xFF8EA893),
+    surfaceContainer = Color(0xFF142016),
+    surfaceContainerHigh = Color(0xFF1C2C1E),
     error = ErrorRed,
     outline = Color(0xFF2E4830),
     outlineVariant = Color(0xFF1A3020)
@@ -170,6 +237,8 @@ private val EmeraldLightScheme = lightColorScheme(
     onBackground = Color(0xFF0D1B0F),
     onSurface = Color(0xFF0D1B0F),
     onSurfaceVariant = Color(0xFF3E5B42),
+    surfaceContainer = Color(0xFFDFECDF),
+    surfaceContainerHigh = Color(0xFFCEE0CE),
     error = ErrorRed,
     outline = Color(0xFFA5C5A8),
     outlineVariant = Color(0xFFC1D9C3)
@@ -193,6 +262,8 @@ private val SunsetDarkScheme = darkColorScheme(
     onBackground = Color(0xFFE8DDD8),
     onSurface = Color(0xFFE8DDD8),
     onSurfaceVariant = Color(0xFFB09888),
+    surfaceContainer = Color(0xFF221812),
+    surfaceContainerHigh = Color(0xFF30221A),
     error = ErrorRed,
     outline = Color(0xFF4A3328),
     outlineVariant = Color(0xFF33221A)
@@ -214,6 +285,8 @@ private val SunsetLightScheme = lightColorScheme(
     onBackground = Color(0xFF2C1407),
     onSurface = Color(0xFF2C1407),
     onSurfaceVariant = Color(0xFF6B4A39),
+    surfaceContainer = Color(0xFFFEE5DB),
+    surfaceContainerHigh = Color(0xFFFCD3C2),
     error = ErrorRed,
     outline = Color(0xFFCFAF9F),
     outlineVariant = Color(0xFFE2C7B8)
@@ -237,6 +310,8 @@ private val RoseDarkScheme = darkColorScheme(
     onBackground = Color(0xFFE8DDE8),
     onSurface = Color(0xFFE8DDE8),
     onSurfaceVariant = Color(0xFFB098B0),
+    surfaceContainer = Color(0xFF22142A),
+    surfaceContainerHigh = Color(0xFF301C3A),
     error = ErrorRed,
     outline = Color(0xFF4A2848),
     outlineVariant = Color(0xFF331A33)
@@ -258,6 +333,8 @@ private val RoseLightScheme = lightColorScheme(
     onBackground = Color(0xFF2C0D1A),
     onSurface = Color(0xFF2C0D1A),
     onSurfaceVariant = Color(0xFF6B3954),
+    surfaceContainer = Color(0xFFFFD8E6),
+    surfaceContainerHigh = Color(0xFFFFC2D8),
     error = ErrorRed,
     outline = Color(0xFFCF99B5),
     outlineVariant = Color(0xFFE2B8CC)
@@ -279,84 +356,124 @@ fun getColorScheme(palette: ColorPalette, darkTheme: Boolean): androidx.compose.
     }
 }
 
-// ─── Typography ───────────────────────────────────────────────────
+// ─── Typography (Outfit — Rounded, Modern) ────────────────────────
 
 val LocalShareTypography = Typography(
     displayLarge = TextStyle(
+        fontFamily = GoogleSansRounded,
         fontWeight = FontWeight.Bold,
-        fontSize = 32.sp,
-        lineHeight = 40.sp,
-        letterSpacing = (-0.5).sp
+        fontSize = 48.sp,
+        lineHeight = 56.sp,
+        letterSpacing = 0.sp
+    ),
+    displayMedium = TextStyle(
+        fontFamily = GoogleSansRounded,
+        fontWeight = FontWeight.Bold,
+        fontSize = 36.sp,
+        lineHeight = 44.sp,
+        letterSpacing = 0.sp
+    ),
+    displaySmall = TextStyle(
+        fontFamily = GoogleSansRounded,
+        fontWeight = FontWeight.Normal,
+        fontSize = 30.sp,
+        lineHeight = 38.sp,
+        letterSpacing = 0.sp
     ),
     headlineLarge = TextStyle(
-        fontWeight = FontWeight.Bold,
-        fontSize = 28.sp,
-        lineHeight = 36.sp,
-        letterSpacing = (-0.25).sp
+        fontFamily = GoogleSansRounded,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 32.sp,
+        lineHeight = 40.sp,
+        letterSpacing = 0.sp
     ),
     headlineMedium = TextStyle(
+        fontFamily = GoogleSansRounded,
         fontWeight = FontWeight.SemiBold,
-        fontSize = 24.sp,
-        lineHeight = 32.sp
+        fontSize = 28.sp,
+        lineHeight = 36.sp,
+        letterSpacing = 0.sp
     ),
     headlineSmall = TextStyle(
+        fontFamily = GoogleSansRounded,
         fontWeight = FontWeight.SemiBold,
-        fontSize = 20.sp,
-        lineHeight = 28.sp
+        fontSize = 24.sp,
+        lineHeight = 32.sp,
+        letterSpacing = 0.sp
     ),
     titleLarge = TextStyle(
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 18.sp,
-        lineHeight = 26.sp
+        fontFamily = GoogleSansRounded,
+        fontWeight = FontWeight.Normal,
+        fontSize = 22.sp,
+        lineHeight = 28.sp,
+        letterSpacing = 0.sp
     ),
     titleMedium = TextStyle(
+        fontFamily = GoogleSansRounded,
         fontWeight = FontWeight.Medium,
-        fontSize = 16.sp,
+        fontSize = 18.sp,
         lineHeight = 24.sp,
         letterSpacing = 0.15.sp
     ),
     titleSmall = TextStyle(
+        fontFamily = GoogleSansRounded,
         fontWeight = FontWeight.Medium,
         fontSize = 14.sp,
         lineHeight = 20.sp,
         letterSpacing = 0.1.sp
     ),
     bodyLarge = TextStyle(
+        fontFamily = GoogleSansRounded,
         fontWeight = FontWeight.Normal,
         fontSize = 16.sp,
         lineHeight = 24.sp,
         letterSpacing = 0.5.sp
     ),
     bodyMedium = TextStyle(
+        fontFamily = GoogleSansRounded,
         fontWeight = FontWeight.Normal,
         fontSize = 14.sp,
         lineHeight = 20.sp,
         letterSpacing = 0.25.sp
     ),
     bodySmall = TextStyle(
+        fontFamily = GoogleSansRounded,
         fontWeight = FontWeight.Normal,
         fontSize = 12.sp,
         lineHeight = 16.sp,
         letterSpacing = 0.4.sp
     ),
     labelLarge = TextStyle(
+        fontFamily = GoogleSansRounded,
         fontWeight = FontWeight.Medium,
-        fontSize = 14.sp,
+        fontSize = 16.sp,
         lineHeight = 20.sp,
         letterSpacing = 0.1.sp
     ),
     labelMedium = TextStyle(
+        fontFamily = GoogleSansRounded,
         fontWeight = FontWeight.Medium,
-        fontSize = 12.sp,
+        fontSize = 14.sp,
         lineHeight = 16.sp,
         letterSpacing = 0.5.sp
     ),
     labelSmall = TextStyle(
+        fontFamily = GoogleSansRounded,
         fontWeight = FontWeight.Medium,
         fontSize = 11.sp,
         lineHeight = 16.sp,
         letterSpacing = 0.5.sp
     )
+)
+
+// ─── M3 Expressive Shapes ─────────────────────────────────────────
+
+val LocalShareShapes = Shapes(
+    extraSmall = RoundedCornerShape(8.dp),
+    small = RoundedCornerShape(12.dp),
+    medium = RoundedCornerShape(16.dp),
+    large = RoundedCornerShape(24.dp),
+    extraLarge = RoundedCornerShape(28.dp)
 )
 
 // ─── Theme Composable ─────────────────────────────────────────────
@@ -394,6 +511,7 @@ fun LocalShareTheme(
     MaterialTheme(
         colorScheme = colorScheme,
         typography = LocalShareTypography,
+        shapes = LocalShareShapes,
         content = content
     )
 }

@@ -22,6 +22,8 @@ import androidx.compose.material.icons.automirrored.rounded.ListAlt
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.Upload
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilledTonalButton
@@ -119,7 +121,7 @@ private fun LogEntryItem(entry: AccessLogEntry) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
         ),
         shape = RoundedCornerShape(14.dp)
     ) {
@@ -141,6 +143,7 @@ private fun LogEntryItem(entry: AccessLogEntry) {
                     AccessAction.BROWSE -> Icons.Rounded.Search
                     AccessAction.DOWNLOAD -> Icons.Rounded.Download
                     AccessAction.STREAM -> Icons.Rounded.PlayArrow
+                    AccessAction.UPLOAD -> Icons.Rounded.Upload
                 }
                 Icon(
                     imageVector = icon,
@@ -248,4 +251,5 @@ private fun getActionColor(action: AccessAction) = when (action) {
     AccessAction.BROWSE -> MaterialTheme.colorScheme.primary
     AccessAction.DOWNLOAD -> MaterialTheme.colorScheme.tertiary
     AccessAction.STREAM -> MaterialTheme.colorScheme.secondary
+    AccessAction.UPLOAD -> Color(0xFF22C55E)
 }

@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -32,24 +33,35 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Devices
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.Android
 import androidx.compose.material.icons.rounded.AudioFile
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.Movie
 import androidx.compose.material.icons.rounded.Android
+import androidx.compose.material.icons.rounded.ExpandLess
+import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.QrCodeScanner
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.MaterialTheme
+import com.localshare.app.service.ServerForegroundService
 import androidx.compose.material3.Switch
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.AlertDialog
@@ -57,6 +69,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.Checkbox
 import androidx.compose.runtime.Composable
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -81,6 +94,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.localshare.app.data.FileCategory
 import com.localshare.app.ui.FileShareViewModel
+import com.localshare.app.ui.utils.bounceClick
+import com.localshare.app.ui.utils.bounceScale
+import androidx.compose.foundation.interaction.MutableInteractionSource
 
 @Composable
 fun HomeScreen(viewModel: FileShareViewModel) {
@@ -92,15 +108,29 @@ fun HomeScreen(viewModel: FileShareViewModel) {
     var showReceiveSheet by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
-    val folderPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocumentTree()
-    ) { uri ->
-        uri?.let {
-            val takeFlags: Int = Intent.FLAG_GRANT_READ_URI_PERMISSION
-            context.contentResolver.takePersistableUriPermission(it, takeFlags)
-            viewModel.addCustomFolder(it.toString())
+    val fileRepository = remember { com.localshare.app.data.FileRepository(context) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+
+    val filePicker = rememberLauncherForActivityResult(OpenFilesAtRootContract()) { uris ->
+        if (uris.isNotEmpty()) {
+            scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                val files = fileRepository.resolveUris(uris)
+                viewModel.addSharedFiles(files)
+            }
         }
     }
+
+    val mediaPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia()) { uris ->
+        if (uris.isNotEmpty()) {
+            scope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                val files = fileRepository.resolveUris(uris)
+                viewModel.addSharedFiles(files)
+            }
+        }
+    }
+
+    var showTextPasteDialog by remember { mutableStateOf(false) }
+    var showAppPickerSheet by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -109,34 +139,43 @@ fun HomeScreen(viewModel: FileShareViewModel) {
             .padding(horizontal = 20.dp, vertical = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // ─── Status Header ──────────────────────────────────────
-            StatusIndicator(isRunning = isRunning)
+        // ─── Status Card ────────────────────────────────────────
+        StatusIndicator(isRunning = isRunning)
 
-            // ─── Start/Stop FAB ─────────────────────────────────────
-            ServerControlButton(
-                isRunning = isRunning,
-                onToggle = { viewModel.toggleServer() }
-            )
-        }
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        // ─── Receive Files Button ───────────────────────────────
-        androidx.compose.material3.OutlinedButton(
-            onClick = { showReceiveSheet = true },
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // ─── Split-Shape Action Buttons ─────────────────────────
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp)
-                .height(48.dp)
+                .height(56.dp),
+            horizontalArrangement = Arrangement.spacedBy(3.dp)
         ) {
-            Icon(Icons.Rounded.QrCodeScanner, contentDescription = "Receive")
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Receive from Device", fontWeight = FontWeight.Bold)
+            // Start/Stop Server — rounded left
+            ServerControlButton(
+                isRunning = isRunning,
+                onToggle = { viewModel.toggleServer() },
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight(),
+                shape = RoundedCornerShape(topStart = 28.dp, bottomStart = 28.dp, topEnd = 8.dp, bottomEnd = 8.dp)
+            )
+
+            // Receive from Device — rounded right
+            val receiveInteractionSource = remember { MutableInteractionSource() }
+            androidx.compose.material3.FilledTonalButton(
+                onClick = { showReceiveSheet = true },
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .bounceScale(receiveInteractionSource),
+                shape = RoundedCornerShape(topStart = 8.dp, bottomStart = 8.dp, topEnd = 28.dp, bottomEnd = 28.dp),
+                interactionSource = receiveInteractionSource
+            ) {
+                Icon(Icons.Rounded.QrCodeScanner, contentDescription = "Receive", modifier = Modifier.size(20.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Receive", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
+            }
         }
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -176,138 +215,227 @@ fun HomeScreen(viewModel: FileShareViewModel) {
         }
 
         // ─── URL Card with QR ───────────────────────────────────
+        var displayUrl by remember { mutableStateOf("") }
+        if (serverUrl != null) {
+            displayUrl = serverUrl!!
+        }
+
         AnimatedVisibility(
             visible = isRunning && serverUrl != null,
             enter = fadeIn() + expandVertically(),
             exit = fadeOut() + shrinkVertically()
         ) {
-            serverUrl?.let { url ->
-                ServerUrlCard(
-                    url = url,
-                    deviceName = settings.deviceName,
-                    connectedDevices = connectedDevices,
-                    onCopy = { copyToClipboard(context, url) },
-                    onEditName = { showNameDialog = true }
-                )
-            }
+            ServerUrlCard(
+                url = displayUrl,
+                deviceName = settings.deviceName,
+                connectedDevices = connectedDevices,
+                onCopy = { copyToClipboard(context, displayUrl) },
+                onEditName = { showNameDialog = true }
+            )
         }
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // ─── Category Toggles ───────────────────────────────────
+        // ─── Share Grid ───────────────────────────────────
         Card(
+            shape = RoundedCornerShape(24.dp),
             modifier = Modifier.fillMaxWidth(),
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-            ),
-            shape = RoundedCornerShape(20.dp)
+                containerColor = MaterialTheme.colorScheme.surfaceContainer
+            )
         ) {
-            Column(modifier = Modifier.padding(20.dp)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 20.dp)
+            ) {
                 Text(
-                    text = "Shared Folders",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    text = "Share Items",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp)
                 )
 
-                Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
-                Text(
-                    text = "Toggle categories to include in sharing",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                FileCategory.entries.forEach { category ->
-                    if (category != FileCategory.CUSTOM_FOLDERS) {
-                        CategoryToggleRow(
-                            category = category,
-                            isEnabled = shareConfig.isCategoryEnabled(category),
-                            onToggle = { viewModel.toggleCategory(category) }
-                        )
-                    }
+        // Single row: Media, Files, Apps, Text
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            ShareGridButton(
+                icon = Icons.Rounded.Image,
+                label = "Media",
+                onClick = {
+                    mediaPicker.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))
                 }
-
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                // ─── Custom Folders Section ───────────────────────────────────
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Custom Folders",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    TextButton(onClick = { folderPickerLauncher.launch(null) }) {
-                        Text("Add Folder")
-                    }
+            )
+            ShareGridButton(
+                icon = Icons.Rounded.Description,
+                label = "Files",
+                onClick = {
+                    filePicker.launch("*/*")
                 }
-
-                if (shareConfig.customFolderUris.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    shareConfig.customFolderUris.forEach { uriString ->
-                        val folderName = try {
-                            val uri = Uri.parse(uriString)
-                            val docFile = DocumentFile.fromTreeUri(context, uri)
-                            docFile?.name ?: "Unknown Folder"
-                        } catch (_: Exception) {
-                            "Unknown Folder"
-                        }
-
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(MaterialTheme.colorScheme.surface)
-                                .padding(horizontal = 12.dp, vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    Icons.Rounded.Folder,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(
-                                    text = folderName,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.width(150.dp)
-                                )
-                            }
-                            IconButton(
-                                onClick = { viewModel.removeCustomFolder(uriString) },
-                                modifier = Modifier.size(32.dp)
-                            ) {
-                                Icon(
-                                    Icons.Filled.Delete,
-                                    contentDescription = "Remove folder",
-                                    tint = MaterialTheme.colorScheme.error,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                        }
-                    }
+            )
+            ShareGridButton(
+                icon = Icons.Rounded.Android,
+                label = "Apps",
+                onClick = {
+                    showAppPickerSheet = true
                 }
-            }
+            )
+            ShareGridButton(
+                icon = Icons.Filled.ContentCopy,
+                label = "Text",
+                onClick = {
+                    showTextPasteDialog = true
+                }
+            )
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
-    }
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Text(
+            text = "Selected files will appear in the Files tab",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+        )
+        
+        Spacer(modifier = Modifier.height(16.dp))
+    } // End Column inside ElevatedCard
+} // End ElevatedCard
+
+Spacer(modifier = Modifier.height(120.dp))
+} // End Main Column
 
     if (showReceiveSheet) {
         ReceiveBottomSheet(onDismiss = { showReceiveSheet = false })
+    }
+
+    if (showTextPasteDialog) {
+        var pastedText by remember { mutableStateOf("") }
+        var createTextFile by remember { mutableStateOf(false) }
+        
+        AlertDialog(
+            onDismissRequest = { showTextPasteDialog = false },
+            title = { Text("Share Text") },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = pastedText,
+                        onValueChange = { pastedText = it },
+                        label = { Text("Paste text or links here") },
+                        modifier = Modifier.fillMaxWidth().height(150.dp)
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { createTextFile = !createTextFile },
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = createTextFile,
+                            onCheckedChange = { createTextFile = it }
+                        )
+                        Text("Create a downloadable text file", style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (pastedText.isNotBlank()) {
+                        if (createTextFile) {
+                            val textId = pastedText.hashCode().toLong()
+                            val textFile = com.localshare.app.data.SharedFile(
+                                id = textId,
+                                name = "SharedText_${System.currentTimeMillis()}.txt",
+                                path = "virtual://$pastedText",
+                                uri = Uri.parse("virtual://$textId"),
+                                size = pastedText.toByteArray().size.toLong(),
+                                mimeType = "text/plain",
+                                category = FileCategory.DOCUMENTS,
+                                lastModified = System.currentTimeMillis()
+                            )
+                            viewModel.addSharedFiles(listOf(textFile))
+                        }
+
+                        // Update the internal server clipboard for web UI syncing without overwriting the OS clipboard
+                        try {
+                            ServerForegroundService.updateServerClipboard(pastedText)
+                            val toastMsg = if (createTextFile) "Shared text file to web UI" else "Text shared to web UI"
+                            Toast.makeText(context, toastMsg, Toast.LENGTH_SHORT).show()
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                    }
+                    showTextPasteDialog = false
+                }) {
+                    Text("Share")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showTextPasteDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
+
+    if (showAppPickerSheet) {
+        // App Picker implementation will go here
+        AppPickerBottomSheet(
+            onDismiss = { showAppPickerSheet = false },
+            onAppSelected = { appFile ->
+                viewModel.addSharedFiles(listOf(appFile))
+                showAppPickerSheet = false
+            }
+        )
+    }
+}
+
+@Composable
+fun ShareGridButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    onClick: () -> Unit
+) {
+    val containerColor = MaterialTheme.colorScheme.primaryContainer
+    val iconColor = MaterialTheme.colorScheme.onPrimaryContainer
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .clip(RoundedCornerShape(16.dp))
+            .bounceClick(onClick = onClick)
+            .padding(vertical = 10.dp, horizontal = 8.dp)
+            .width(72.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(56.dp)
+                .clip(CircleShape)
+                .background(containerColor),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                tint = iconColor,
+                modifier = Modifier.size(26.dp)
+            )
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1
+        )
     }
 }
 
@@ -335,36 +463,46 @@ private fun StatusIndicator(isRunning: Boolean) {
         label = "statusColor"
     )
 
-    Row(
-        modifier = Modifier
-            .height(48.dp)
-            .width(160.dp)
-            .clip(RoundedCornerShape(50))
-            .background(statusColor.copy(alpha = 0.15f))
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
+        )
     ) {
-        Box(
+        Row(
             modifier = Modifier
-                .size(8.dp)
-                .graphicsLayer { alpha = if (isRunning) pulseAlpha else 1f }
-                .background(statusColor, CircleShape)
-        )
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(10.dp)
+                    .graphicsLayer { alpha = if (isRunning) pulseAlpha else 1f }
+                    .background(statusColor, CircleShape)
+            )
 
-        Spacer(modifier = Modifier.width(8.dp))
+            Spacer(modifier = Modifier.width(12.dp))
 
-        Text(
-            text = if (isRunning) "Connected" else "Disconnected",
-            style = MaterialTheme.typography.labelLarge,
-            color = statusColor,
-            fontWeight = FontWeight.Bold
-        )
+            Text(
+                text = if (isRunning) "Server Running" else "Server Offline",
+                style = MaterialTheme.typography.titleMedium,
+                color = statusColor,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
     }
 }
 
 @Composable
-private fun ServerControlButton(isRunning: Boolean, onToggle: () -> Unit) {
+private fun ServerControlButton(
+    isRunning: Boolean,
+    onToggle: () -> Unit,
+    modifier: Modifier = Modifier,
+    shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(50)
+) {
     val stopRed = Color(0xFFEF4444)
 
     val buttonColor by animateColorAsState(
@@ -373,13 +511,17 @@ private fun ServerControlButton(isRunning: Boolean, onToggle: () -> Unit) {
         label = "buttonColor"
     )
 
+    val interactionSource = remember { MutableInteractionSource() }
+
     androidx.compose.material3.Button(
         onClick = onToggle,
         colors = androidx.compose.material3.ButtonDefaults.buttonColors(
             containerColor = buttonColor,
             contentColor = Color.White
         ),
-        modifier = Modifier.height(48.dp).width(160.dp)
+        modifier = modifier.bounceScale(interactionSource),
+        shape = shape,
+        interactionSource = interactionSource
     ) {
         Icon(
             imageVector = if (isRunning) Icons.Filled.Stop else Icons.Filled.PlayArrow,
@@ -405,12 +547,14 @@ private fun ServerUrlCard(
     onCopy: () -> Unit,
     onEditName: () -> Unit
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
         ),
-        shape = RoundedCornerShape(20.dp)
+        shape = RoundedCornerShape(24.dp)
     ) {
         Column(
             modifier = Modifier.padding(20.dp),
@@ -419,17 +563,18 @@ private fun ServerUrlCard(
             // Device Name
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.Center,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 4.dp, vertical = 6.dp)
             ) {
                 Text(
-                    text = deviceName,
+                    text = "Device Name - $deviceName",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
+                Spacer(modifier = Modifier.width(8.dp))
                 IconButton(onClick = onEditName, modifier = Modifier.size(28.dp)) {
                     Icon(
                         imageVector = Icons.Filled.Edit,
@@ -439,14 +584,72 @@ private fun ServerUrlCard(
                     )
                 }
             }
-            
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // URL + Copy
+            val port = url.substringAfterLast(":")
+            val magicLinkUrl = "http://localshare.local:$port"
+
+            var showQrCode by remember { mutableStateOf(false) }
+
+            // Expandable QR Code Section
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .bounceClick { showQrCode = !showQrCode },
+                color = MaterialTheme.colorScheme.surfaceContainerHigh
+            ) {
+                Column(
+                    modifier = Modifier.padding(12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = if (showQrCode) "Hide QR Code" else "Show QR Code",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Icon(
+                            imageVector = if (showQrCode) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
+                            contentDescription = "Toggle QR",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    androidx.compose.animation.AnimatedVisibility(visible = showQrCode) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(Color.White)
+                                    .padding(12.dp)
+                            ) {
+                                com.localshare.app.ui.components.QrCodeImage(
+                                    url = magicLinkUrl,
+                                    size = 140.dp,
+                                    foregroundColor = android.graphics.Color.BLACK,
+                                    backgroundColor = android.graphics.Color.WHITE
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // URL 1 (IP Address) + Copy
             Row(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.surface)
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(MaterialTheme.colorScheme.surfaceContainerLow)
                     .padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -466,6 +669,42 @@ private fun ServerUrlCard(
                     Icon(
                         imageVector = Icons.Filled.ContentCopy,
                         contentDescription = "Copy URL",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // URL 2 (Magic Link) + Copy
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.surface)
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Spacer(modifier = Modifier.width(6.dp))
+
+                Text(
+                    text = magicLinkUrl,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.weight(1f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                IconButton(
+                    onClick = { copyToClipboard(context, magicLinkUrl) }, 
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.ContentCopy,
+                        contentDescription = "Copy Magic Link",
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(18.dp)
                     )
@@ -499,54 +738,73 @@ private fun ServerUrlCard(
     }
 }
 
-// ─── Category Toggle Row ───────────────────────────────────────────
+// ─── App Picker Bottom Sheet ──────────────────────────────────────
 
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
-private fun CategoryToggleRow(
-    category: FileCategory,
-    isEnabled: Boolean,
-    onToggle: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        val icon = when (category) {
-            FileCategory.VIDEOS -> Icons.Rounded.Movie
-            FileCategory.PHOTOS -> Icons.Rounded.Image
-            FileCategory.AUDIO -> Icons.Rounded.AudioFile
-            FileCategory.DOCUMENTS -> Icons.Rounded.Description
-            FileCategory.DOWNLOADS -> Icons.Rounded.Download
-            FileCategory.APPS -> Icons.Rounded.Android
-            FileCategory.CUSTOM_FOLDERS -> Icons.Rounded.Folder
+fun AppPickerBottomSheet(onDismiss: () -> Unit, onAppSelected: (com.localshare.app.data.SharedFile) -> Unit) {
+    val context = LocalContext.current
+    val fileRepository = remember { com.localshare.app.data.FileRepository(context) }
+    var apps by remember { mutableStateOf<List<com.localshare.app.data.SharedFile>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        withContext(kotlinx.coroutines.Dispatchers.IO) {
+            apps = fileRepository.getInstalledApps()
+            isLoading = false
         }
+    }
 
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(24.dp)
-        )
-
-        Spacer(modifier = Modifier.width(16.dp))
-
-        Text(
-            text = category.displayName,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.weight(1f)
-        )
-
-        Switch(
-            checked = isEnabled,
-            onCheckedChange = { onToggle() },
-            colors = SwitchDefaults.colors(
-                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                checkedThumbColor = Color.White
+    androidx.compose.material3.ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Text(
+                text = "Select App to Share",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 16.dp)
             )
-        )
+
+            if (isLoading) {
+                Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                    androidx.compose.material3.CircularProgressIndicator()
+                }
+            } else {
+                androidx.compose.foundation.lazy.LazyColumn(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    items(apps.size) { index ->
+                        val app = apps[index]
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onAppSelected(app) }
+                                .padding(vertical = 12.dp, horizontal = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Android,
+                                contentDescription = null,
+                                tint = Color(0xFF10B981),
+                                modifier = Modifier.size(32.dp)
+                            )
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Text(
+                                text = app.name.removeSuffix(".apk"),
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                        }
+                    }
+                    item { Spacer(modifier = Modifier.height(48.dp)) }
+                }
+            }
+        }
     }
 }
 
@@ -557,4 +815,29 @@ private fun copyToClipboard(context: Context, text: String) {
     val clip = ClipData.newPlainText("LocalShare URL", text)
     clipboard.setPrimaryClip(clip)
     Toast.makeText(context, "URL copied to clipboard", Toast.LENGTH_SHORT).show()
+}
+
+class OpenFilesAtRootContract : androidx.activity.result.contract.ActivityResultContract<String, List<android.net.Uri>>() {
+    override fun createIntent(context: android.content.Context, input: String): android.content.Intent {
+        return android.content.Intent(android.content.Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(android.content.Intent.CATEGORY_OPENABLE)
+            type = "*/*"
+            putExtra(android.content.Intent.EXTRA_ALLOW_MULTIPLE, true)
+            putExtra(
+                android.provider.DocumentsContract.EXTRA_INITIAL_URI,
+                android.net.Uri.parse("content://com.android.externalstorage.documents/document/primary%3A")
+            )
+        }
+    }
+
+    override fun parseResult(resultCode: Int, intent: android.content.Intent?): List<android.net.Uri> {
+        if (resultCode != android.app.Activity.RESULT_OK || intent == null) return emptyList()
+        val uris = mutableListOf<android.net.Uri>()
+        intent.clipData?.let { clipData ->
+            for (i in 0 until clipData.itemCount) {
+                uris.add(clipData.getItemAt(i).uri)
+            }
+        } ?: intent.data?.let { uris.add(it) }
+        return uris
+    }
 }

@@ -3,7 +3,7 @@ package com.localshare.app.ui.screens
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
+import com.localshare.app.ui.utils.bounceClick
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -60,8 +60,8 @@ fun AboutScreen(onBackClick: () -> Unit) {
                 },
                 scrollBehavior = scrollBehavior,
                 colors = TopAppBarDefaults.largeTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    titleContentColor = MaterialTheme.colorScheme.onBackground
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface
                 )
             )
         }
@@ -95,7 +95,7 @@ fun AboutScreen(onBackClick: () -> Unit) {
                         text = "github.com/Kaifazad/LocalShare",
                         style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
                         color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.clickable {
+                        modifier = Modifier.bounceClick {
                             val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/Kaifazad/LocalShare.git"))
                             context.startActivity(intent)
                         }
@@ -127,7 +127,7 @@ fun AboutScreen(onBackClick: () -> Unit) {
                         text = "github.com/kaifazad",
                         style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
                         color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.clickable {
+                        modifier = Modifier.bounceClick {
                             val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/kaifazad"))
                             context.startActivity(intent)
                         }
@@ -148,7 +148,7 @@ fun AboutScreen(onBackClick: () -> Unit) {
                         text = "@kaif.azad",
                         style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
                         color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.clickable {
+                        modifier = Modifier.bounceClick {
                             val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://instagram.com/kaif.azad"))
                             context.startActivity(intent)
                         }
@@ -182,9 +182,9 @@ private fun AboutCard(title: String, content: @Composable () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
         ),
-        shape = RoundedCornerShape(20.dp)
+        shape = RoundedCornerShape(24.dp)
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Text(

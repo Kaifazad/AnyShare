@@ -22,6 +22,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 
 /**
@@ -54,18 +55,48 @@ class ServerForegroundService : Service() {
         private var _pin: String? = null
         private var _deviceName: String = "LocalShare"
         private var _maxConnections: Int = 3
+        private var _enableNearbyDiscovery: Boolean = true
+
+        private val _newUploadedFiles = kotlinx.coroutines.flow.MutableSharedFlow<java.io.File>(extraBufferCapacity = 100)
+        val newUploadedFiles: kotlinx.coroutines.flow.SharedFlow<java.io.File> = _newUploadedFiles.asSharedFlow()
+
+        // Cache the latest share config in case the server isn't running yet
+        private var _shareConfig: ShareConfig? = null
 
         fun updateShareConfig(config: ShareConfig) {
+            _shareConfig = config
             _server?.shareConfig = config
+        }
+
+        // Cache the clipboard text in case the server isn't running yet
+        private var _clipboardCache: String? = null
+
+        /**
+         * Called by the user's explicit share action from the text paste dialog.
+         * This sets the "Shared from Phone" text on the web UI.
+         */
+        fun updateServerClipboard(text: String) {
+            _clipboardCache = text
+            _server?.setSharedText(text)
+        }
+
+        /**
+         * Called by the ViewModel's periodic clipboard sync loop.
+         * This updates the "Phone Clipboard" section on the web UI
+         * WITHOUT overwriting explicitly shared text.
+         */
+        fun syncSystemClipboard(text: String) {
+            _server?.updatePhoneClipboard(text)
         }
 
         /**
          * Update server settings (PIN, device name, max connections) at runtime.
          */
-        fun updateServerSettings(pin: String?, deviceName: String, maxConnections: Int) {
+        fun updateServerSettings(pin: String?, deviceName: String, maxConnections: Int, enableNearbyDiscovery: Boolean = true) {
             _pin = pin
             _deviceName = deviceName
             _maxConnections = maxConnections
+            _enableNearbyDiscovery = enableNearbyDiscovery
             // If server is already running, update it live
             _server?.let { server ->
                 server.pin = pin
@@ -90,6 +121,7 @@ class ServerForegroundService : Service() {
     }
 
     private var server: FileShareServer? = null
+    private var broadcaster: com.localshare.app.server.DiscoveryBroadcaster? = null
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     override fun onCreate() {
@@ -129,8 +161,16 @@ class ServerForegroundService : Service() {
                         it.pin = _pin
                         it.deviceName = _deviceName
                         it.maxConnections = _maxConnections
+                        _shareConfig?.let { config -> it.shareConfig = config }
+                        _clipboardCache?.let { text -> it.setSharedText(text) }
                         it.start()
                         _server = it
+                        
+                        serviceScope.launch(Dispatchers.IO) {
+                            it.newUploadedFiles.collect { file ->
+                                _newUploadedFiles.tryEmit(file)
+                            }
+                        }
                     }
                     bound = true
                     currentPort = portToTry
@@ -148,6 +188,15 @@ class ServerForegroundService : Service() {
             _isRunning.value = true
             _serverUrl.value = url
 
+            if (_enableNearbyDiscovery) {
+                // Register mDNS so the server is reachable at localshare.local
+                com.localshare.app.util.NsdHelper.register(this, currentPort, _deviceName)
+
+                // Start UDP Multicast Broadcaster
+                broadcaster = com.localshare.app.server.DiscoveryBroadcaster(this)
+                broadcaster?.start(_deviceName, currentPort)
+            }
+
             // Observe connected device count
             serviceScope.launch {
                 server?.connectedDeviceCount?.collect { count ->
@@ -159,7 +208,7 @@ class ServerForegroundService : Service() {
             val notification = buildNotification(url)
             startForeground(NOTIFICATION_ID, notification)
 
-            Log.i(TAG, "Server started at $url")
+            Log.i(TAG, "Server started at $url (mDNS: localshare.local:$currentPort)")
 
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start server", e)
@@ -190,6 +239,13 @@ class ServerForegroundService : Service() {
         _isRunning.value = false
         _serverUrl.value = null
         _connectedDeviceCount.value = 0
+
+        // Unregister mDNS service
+        com.localshare.app.util.NsdHelper.unregister()
+
+        // Stop UDP Broadcast
+        broadcaster?.stop()
+        broadcaster = null
 
         Log.i(TAG, "Server stopped")
     }

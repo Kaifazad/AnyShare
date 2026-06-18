@@ -1,49 +1,25 @@
 package com.localshare.app.data
 
 /**
- * Holds the sharing configuration: which categories are enabled
- * and which individual files are selected.
+ * Holds the sharing configuration: a simple queue of explicitly selected files.
  */
 data class ShareConfig(
-    val categoryToggles: Map<FileCategory, Boolean> = FileCategory.entries.associateWith { false },
-    val selectedFileIds: Set<Long> = emptySet(),
-    val customFolderUris: Set<String> = emptySet()
+    val sharedFiles: List<SharedFile> = emptyList()
 ) {
-    fun isCategoryEnabled(category: FileCategory): Boolean {
-        return categoryToggles[category] ?: false
+    fun addFiles(files: List<SharedFile>): ShareConfig {
+        val currentIds = sharedFiles.map { it.id }.toSet()
+        val newFiles = files.filter { it.id !in currentIds }
+        return copy(sharedFiles = sharedFiles + newFiles)
     }
 
-    fun toggleCategory(category: FileCategory): ShareConfig {
-        val current = isCategoryEnabled(category)
-        return copy(
-            categoryToggles = categoryToggles + (category to !current)
-        )
+    fun removeFile(id: Long): ShareConfig {
+        return copy(sharedFiles = sharedFiles.filter { it.id != id })
     }
 
-    fun addFile(fileId: Long): ShareConfig {
-        return copy(selectedFileIds = selectedFileIds + fileId)
-    }
-
-    fun removeFile(fileId: Long): ShareConfig {
-        return copy(selectedFileIds = selectedFileIds - fileId)
-    }
-
-    fun toggleFile(fileId: Long): ShareConfig {
-        return if (fileId in selectedFileIds) removeFile(fileId) else addFile(fileId)
-    }
-
-    fun isFileSelected(fileId: Long): Boolean {
-        return fileId in selectedFileIds
-    }
-
-    fun addCustomFolder(uriString: String): ShareConfig {
-        return copy(customFolderUris = customFolderUris + uriString)
-    }
-
-    fun removeCustomFolder(uriString: String): ShareConfig {
-        return copy(customFolderUris = customFolderUris - uriString)
+    fun clear(): ShareConfig {
+        return copy(sharedFiles = emptyList())
     }
 
     val hasAnythingShared: Boolean
-        get() = categoryToggles.any { it.value } || selectedFileIds.isNotEmpty() || customFolderUris.isNotEmpty()
+        get() = sharedFiles.isNotEmpty()
 }

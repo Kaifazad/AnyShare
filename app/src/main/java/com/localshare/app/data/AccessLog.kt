@@ -30,7 +30,8 @@ data class AccessLogEntry(
 enum class AccessAction(val displayName: String) {
     BROWSE("Browse"),
     DOWNLOAD("Download"),
-    STREAM("Stream")
+    STREAM("Stream"),
+    UPLOAD("Upload")
 }
 
 /**

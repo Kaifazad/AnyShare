@@ -33,15 +33,13 @@ class FileShareActivity : ComponentActivity() {
     ) { permissions ->
         val allGranted = permissions.values.all { it }
         if (allGranted) {
-            viewModel.loadFiles()
+            // Permissions granted
         }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        
-        requestPermissions()
 
         setContent {
             val settings by viewModel.appSettings.collectAsState()
@@ -71,7 +69,7 @@ class FileShareActivity : ComponentActivity() {
         super.onResume()
         // Refresh file list when returning to app
         if (hasStoragePermission()) {
-            viewModel.loadFiles()
+            // Permissions are granted
         }
     }
 
@@ -113,7 +111,7 @@ class FileShareActivity : ComponentActivity() {
         if (permissionsToRequest.isNotEmpty()) {
             permissionLauncher.launch(permissionsToRequest.toTypedArray())
         } else {
-            viewModel.loadFiles()
+            // Permissions already granted
         }
     }
 

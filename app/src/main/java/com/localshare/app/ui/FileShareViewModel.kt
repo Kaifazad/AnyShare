@@ -38,26 +38,10 @@ class FileShareViewModel(application: Application) : AndroidViewModel(applicatio
     private val _shareConfig = MutableStateFlow(ShareConfig())
     val shareConfig: StateFlow<ShareConfig> = _shareConfig.asStateFlow()
 
-    // ─── File Listings ──────────────────────────────────────────
-
-    private val _allFiles = MutableStateFlow<Map<FileCategory, List<SharedFile>>>(emptyMap())
-    val allFiles: StateFlow<Map<FileCategory, List<SharedFile>>> = _allFiles.asStateFlow()
-
-    private val _isLoadingFiles = MutableStateFlow(false)
-    val isLoadingFiles: StateFlow<Boolean> = _isLoadingFiles.asStateFlow()
-
     // ─── Access Logs ────────────────────────────────────────────
 
     private val _accessLogs = MutableStateFlow<List<AccessLogEntry>>(emptyList())
     val accessLogs: StateFlow<List<AccessLogEntry>> = _accessLogs.asStateFlow()
-
-    // ─── Search ─────────────────────────────────────────────────
-
-    private val _searchQuery = MutableStateFlow("")
-    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
-
-    private val _selectedCategory = MutableStateFlow<FileCategory?>(null)
-    val selectedCategory: StateFlow<FileCategory?> = _selectedCategory.asStateFlow()
 
     // ─── App Settings ───────────────────────────────────────────
 
@@ -79,18 +63,42 @@ class FileShareViewModel(application: Application) : AndroidViewModel(applicatio
         // Load persisted settings
         _appSettings.value = settingsRepository.load()
         
-        // Load persisted share config
-        _shareConfig.value = settingsRepository.loadShareConfig()
-
         // Sync server settings
         syncServerSettings()
 
-        loadFiles()
         // Periodically refresh logs
         viewModelScope.launch {
             while (true) {
                 refreshLogs()
                 kotlinx.coroutines.delay(3000)
+            }
+        }
+
+        // Listen for new uploaded files from the server
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            ServerForegroundService.newUploadedFiles.collect { file ->
+                val uri = android.net.Uri.fromFile(file)
+                fileRepository.resolveUris(listOf(uri)).firstOrNull()?.let { sharedFile ->
+                    addSharedFiles(listOf(sharedFile))
+                }
+            }
+        }
+
+        // Clipboard sync: periodically push phone clipboard to the server
+        viewModelScope.launch {
+            val clipboard = getApplication<android.app.Application>()
+                .getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+            while (true) {
+                try {
+                    if (ServerForegroundService.isRunning.value) {
+                        val clip = clipboard.primaryClip
+                        if (clip != null && clip.itemCount > 0) {
+                            val text = clip.getItemAt(0).text?.toString() ?: ""
+                            ServerForegroundService.syncSystemClipboard(text)
+                        }
+                    }
+                } catch (_: Exception) { }
+                kotlinx.coroutines.delay(2000)
             }
         }
     }
@@ -113,111 +121,23 @@ class FileShareViewModel(application: Application) : AndroidViewModel(applicatio
 
     // ─── Share Config Actions ───────────────────────────────────
 
-    fun toggleCategory(category: FileCategory) {
-        _shareConfig.value = _shareConfig.value.toggleCategory(category)
+    fun addSharedFiles(files: List<SharedFile>) {
+        _shareConfig.value = _shareConfig.value.addFiles(files)
         syncShareConfig()
     }
 
-    fun toggleFile(fileId: Long) {
-        _shareConfig.value = _shareConfig.value.toggleFile(fileId)
+    fun removeSharedFile(fileId: Long) {
+        _shareConfig.value = _shareConfig.value.removeFile(fileId)
         syncShareConfig()
     }
 
-    fun selectAllInCategory(category: FileCategory) {
-        val files = _allFiles.value[category] ?: return
-        var config = _shareConfig.value
-        for (file in files) {
-            if (!config.isFileSelected(file.id)) {
-                config = config.addFile(file.id)
-            }
-        }
-        _shareConfig.value = config
-        syncShareConfig()
-    }
-
-    fun deselectAllInCategory(category: FileCategory) {
-        val files = _allFiles.value[category] ?: return
-        var config = _shareConfig.value
-        for (file in files) {
-            config = config.removeFile(file.id)
-        }
-        _shareConfig.value = config
-        syncShareConfig()
-    }
-
-    fun selectFiles(ids: Set<Long>) {
-        var config = _shareConfig.value
-        for (id in ids) {
-            config = config.addFile(id)
-        }
-        _shareConfig.value = config
-        syncShareConfig()
-    }
-
-    fun deselectFiles(ids: Set<Long>) {
-        var config = _shareConfig.value
-        for (id in ids) {
-            config = config.removeFile(id)
-        }
-        _shareConfig.value = config
+    fun clearSharedFiles() {
+        _shareConfig.value = _shareConfig.value.clear()
         syncShareConfig()
     }
 
     private fun syncShareConfig() {
-        settingsRepository.saveShareConfig(_shareConfig.value)
         ServerForegroundService.updateShareConfig(_shareConfig.value)
-    }
-
-    fun addCustomFolder(uriString: String) {
-        _shareConfig.value = _shareConfig.value.addCustomFolder(uriString)
-        syncShareConfig()
-        loadFiles()
-    }
-
-    fun removeCustomFolder(uriString: String) {
-        _shareConfig.value = _shareConfig.value.removeCustomFolder(uriString)
-        syncShareConfig()
-        loadFiles()
-    }
-
-    // ─── File Actions ───────────────────────────────────────────
-
-    fun loadFiles() {
-        viewModelScope.launch {
-            _isLoadingFiles.value = true
-            try {
-                _allFiles.value = fileRepository.getAllFiles(_shareConfig.value.customFolderUris)
-            } catch (e: Exception) {
-                // Handle error
-            } finally {
-                _isLoadingFiles.value = false
-            }
-        }
-    }
-
-    fun setSearchQuery(query: String) {
-        _searchQuery.value = query
-    }
-
-    fun setSelectedCategory(category: FileCategory?) {
-        _selectedCategory.value = category
-    }
-
-    fun getFilteredFiles(): List<SharedFile> {
-        val category = _selectedCategory.value
-        val query = _searchQuery.value.lowercase()
-
-        val files = if (category != null) {
-            _allFiles.value[category] ?: emptyList()
-        } else {
-            _allFiles.value.values.flatten()
-        }
-
-        return if (query.isBlank()) {
-            files
-        } else {
-            files.filter { it.name.lowercase().contains(query) }
-        }
     }
 
     // ─── Log Actions ────────────────────────────────────────────
@@ -251,6 +171,8 @@ class FileShareViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun setMaxConnections(max: Int) = updateSettings { it.copy(maxConnections = max.coerceIn(1, 5)) }
 
+    fun setEnableNearbyDiscovery(enable: Boolean) = updateSettings { it.copy(enableNearbyDiscovery = enable) }
+
     fun randomizeDeviceName() {
         val name = SettingsRepository.generateCuteName()
         setDeviceName(name)
@@ -271,7 +193,8 @@ class FileShareViewModel(application: Application) : AndroidViewModel(applicatio
         ServerForegroundService.updateServerSettings(
             pin = settings.pin,
             deviceName = settings.deviceName,
-            maxConnections = settings.maxConnections
+            maxConnections = settings.maxConnections,
+            enableNearbyDiscovery = settings.enableNearbyDiscovery
         )
     }
 }

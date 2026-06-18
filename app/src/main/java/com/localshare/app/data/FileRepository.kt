@@ -1,279 +1,104 @@
 package com.localshare.app.data
 
-import android.content.ContentResolver
-import android.content.ContentUris
 import android.content.Context
 import android.net.Uri
-import android.os.Environment
-import android.provider.MediaStore
+import android.provider.OpenableColumns
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import androidx.documentfile.provider.DocumentFile
 import java.io.File
 
 /**
- * Repository for querying device files via MediaStore.
+ * Repository for resolving Android URIs into SharedFile objects.
  */
 class FileRepository(private val context: Context) {
 
-    /**
-     * Query all files for a given category from MediaStore.
-     */
-    suspend fun getFilesForCategory(
-        category: FileCategory, 
-        customFolderUris: Set<String> = emptySet()
-    ): List<SharedFile> = withContext(Dispatchers.IO) {
-        when (category) {
-            FileCategory.VIDEOS -> queryMediaStore(
-                MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
-                category
-            )
-            FileCategory.PHOTOS -> queryMediaStore(
-                MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                category
-            )
-            FileCategory.AUDIO -> queryMediaStore(
-                MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
-                category
-            )
-            FileCategory.DOCUMENTS -> queryDocuments()
-            FileCategory.DOWNLOADS -> queryDownloads()
-            FileCategory.APPS -> queryApps()
-            FileCategory.CUSTOM_FOLDERS -> queryCustomFolders(customFolderUris)
-        }
+    fun resolveUris(uris: List<Uri>): List<SharedFile> {
+        return uris.mapNotNull { resolveUri(it) }
     }
 
-    /**
-     * Get all files across all categories.
-     */
-    suspend fun getAllFiles(customFolderUris: Set<String> = emptySet()): Map<FileCategory, List<SharedFile>> = withContext(Dispatchers.IO) {
-        FileCategory.entries.associateWith { category ->
-            try {
-                getFilesForCategory(category, customFolderUris)
-            } catch (e: Exception) {
-                emptyList()
-            }
-        }
-    }
+    private fun resolveUri(uri: Uri): SharedFile? {
+        var name = "Unknown File"
+        var size = 0L
+        var mimeType = "application/octet-stream"
 
-    /**
-     * Get files that should be shared based on the config.
-     */
-    suspend fun getSharedFiles(config: ShareConfig): List<SharedFile> = withContext(Dispatchers.IO) {
-        val result = mutableListOf<SharedFile>()
-
-        // Add files from enabled categories
-        for (category in FileCategory.entries) {
-            if (config.isCategoryEnabled(category)) {
-                result.addAll(getFilesForCategory(category, config.customFolderUris))
-            }
-        }
-
-        // Always add custom folders if they exist (they are implicitly shared)
-        if (config.customFolderUris.isNotEmpty() && !config.isCategoryEnabled(FileCategory.CUSTOM_FOLDERS)) {
-            result.addAll(getFilesForCategory(FileCategory.CUSTOM_FOLDERS, config.customFolderUris))
-        }
-
-        // Add individually selected files (if not already included via category)
-        if (config.selectedFileIds.isNotEmpty()) {
-            val allFiles = FileCategory.entries.flatMap { getFilesForCategory(it, config.customFolderUris) }
-            val categoryFileIds = result.map { it.id }.toSet()
-            val individualFiles = allFiles.filter {
-                it.id in config.selectedFileIds && it.id !in categoryFileIds
-            }
-            result.addAll(individualFiles)
-        }
-
-        result.sortedByDescending { it.lastModified }
-    }
-
-    /**
-     * Find a specific file by its ID across all categories.
-     */
-    suspend fun findFileById(fileId: Long, customFolderUris: Set<String> = emptySet()): SharedFile? = withContext(Dispatchers.IO) {
-        for (category in FileCategory.entries) {
-            val files = getFilesForCategory(category, customFolderUris)
-            val file = files.find { it.id == fileId }
-            if (file != null) return@withContext file
-        }
-        null
-    }
-
-    private fun queryMediaStore(
-        contentUri: Uri,
-        category: FileCategory
-    ): List<SharedFile> {
-        val files = mutableListOf<SharedFile>()
-        val projection = arrayOf(
-            MediaStore.MediaColumns._ID,
-            MediaStore.MediaColumns.DISPLAY_NAME,
-            MediaStore.MediaColumns.SIZE,
-            MediaStore.MediaColumns.MIME_TYPE,
-            MediaStore.MediaColumns.DATE_MODIFIED,
-            MediaStore.MediaColumns.DATA
-        )
-
-        val sortOrder = "${MediaStore.MediaColumns.DATE_MODIFIED} DESC"
-
-        context.contentResolver.query(
-            contentUri,
-            projection,
-            null,
-            null,
-            sortOrder
-        )?.use { cursor ->
-            val idColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID)
-            val nameColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DISPLAY_NAME)
-            val sizeColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.SIZE)
-            val mimeColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.MIME_TYPE)
-            val dateColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATE_MODIFIED)
-            val dataColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATA)
-
-            while (cursor.moveToNext()) {
-                val id = cursor.getLong(idColumn)
-                val name = cursor.getString(nameColumn) ?: "Unknown"
-                val size = cursor.getLong(sizeColumn)
-                val mimeType = cursor.getString(mimeColumn) ?: "application/octet-stream"
-                val dateModified = cursor.getLong(dateColumn) * 1000
-                val data = cursor.getString(dataColumn) ?: ""
-                val uri = ContentUris.withAppendedId(contentUri, id)
-
-                files.add(
-                    SharedFile(
-                        id = id,
-                        name = name,
-                        path = data,
-                        uri = uri,
-                        size = size,
-                        mimeType = mimeType,
-                        category = category,
-                        lastModified = dateModified
-                    )
-                )
-            }
-        }
-
-        return files
-    }
-
-    private fun queryDocuments(): List<SharedFile> {
-        val files = mutableListOf<SharedFile>()
-
-        // Query from MediaStore.Files for document types
-        val projection = arrayOf(
-            MediaStore.Files.FileColumns._ID,
-            MediaStore.Files.FileColumns.DISPLAY_NAME,
-            MediaStore.Files.FileColumns.SIZE,
-            MediaStore.Files.FileColumns.MIME_TYPE,
-            MediaStore.Files.FileColumns.DATE_MODIFIED,
-            MediaStore.Files.FileColumns.DATA
-        )
-
-        val selection = "${MediaStore.Files.FileColumns.MIME_TYPE} IN (?, ?, ?, ?, ?, ?, ?)"
-        val selectionArgs = arrayOf(
-            "application/pdf",
-            "application/msword",
-            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            "application/vnd.ms-excel",
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            "text/plain",
-            "application/zip"
-        )
-
-        val sortOrder = "${MediaStore.Files.FileColumns.DATE_MODIFIED} DESC"
-
-        context.contentResolver.query(
-            MediaStore.Files.getContentUri("external"),
-            projection,
-            selection,
-            selectionArgs,
-            sortOrder
-        )?.use { cursor ->
-            val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID)
-            val nameColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DISPLAY_NAME)
-            val sizeColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.SIZE)
-            val mimeColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.MIME_TYPE)
-            val dateColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATE_MODIFIED)
-            val dataColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATA)
-
-            while (cursor.moveToNext()) {
-                val id = cursor.getLong(idColumn)
-                val name = cursor.getString(nameColumn) ?: "Unknown"
-                val size = cursor.getLong(sizeColumn)
-                val mimeType = cursor.getString(mimeColumn) ?: "application/octet-stream"
-                val dateModified = cursor.getLong(dateColumn) * 1000
-                val data = cursor.getString(dataColumn) ?: ""
-                val uri = ContentUris.withAppendedId(
-                    MediaStore.Files.getContentUri("external"), id
-                )
-
-                files.add(
-                    SharedFile(
-                        id = id,
-                        name = name,
-                        path = data,
-                        uri = uri,
-                        size = size,
-                        mimeType = mimeType,
-                        category = FileCategory.DOCUMENTS,
-                        lastModified = dateModified
-                    )
-                )
-            }
-        }
-
-        return files
-    }
-
-    private fun queryDownloads(): List<SharedFile> {
-        val files = mutableListOf<SharedFile>()
-        val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-
-        if (downloadsDir.exists() && downloadsDir.isDirectory) {
-            downloadsDir.listFiles()?.forEach { file ->
-                if (file.isFile) {
-                    val mimeType = getMimeType(file.name)
-                    files.add(
-                        SharedFile(
-                            id = file.absolutePath.hashCode().toLong(),
-                            name = file.name,
-                            path = file.absolutePath,
-                            uri = Uri.fromFile(file),
-                            size = file.length(),
-                            mimeType = mimeType,
-                            category = FileCategory.DOWNLOADS,
-                            lastModified = file.lastModified()
-                        )
-                    )
+        if (uri.scheme == "content") {
+            val docFile = DocumentFile.fromSingleUri(context, uri)
+            if (docFile != null && docFile.name != null) {
+                name = docFile.name!!
+                size = docFile.length()
+            } else {
+                context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                    if (cursor.moveToFirst()) {
+                        val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                        if (nameIndex != -1) {
+                            name = cursor.getString(nameIndex) ?: "Unknown"
+                        }
+                        val sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE)
+                        if (sizeIndex != -1) {
+                            size = cursor.getLong(sizeIndex)
+                        }
+                    }
                 }
             }
+            mimeType = context.contentResolver.getType(uri) ?: mimeType
+        } else if (uri.scheme == "file") {
+            val file = File(uri.path ?: "")
+            name = file.name
+            size = file.length()
+            mimeType = getMimeType(name)
         }
 
-        return files.sortedByDescending { it.lastModified }
+        // Generate a stable ID based on URI string
+        val id = uri.toString().hashCode().toLong()
+
+        return SharedFile(
+            id = id,
+            name = name,
+            path = uri.toString(), // We store the URI string in path for reference
+            uri = uri,
+            size = size,
+            mimeType = mimeType,
+            category = FileCategory.fromMimeType(mimeType),
+            lastModified = System.currentTimeMillis()
+        )
     }
 
-    private fun queryApps(): List<SharedFile> {
-        val files = mutableListOf<SharedFile>()
-        val pm = context.packageManager
+    fun resolveFolder(treeUri: Uri): SharedFile? {
+        val documentFile = DocumentFile.fromTreeUri(context, treeUri) ?: return null
         
-        val apps = pm.getInstalledApplications(PackageManager.GET_META_DATA)
-        for (appInfo in apps) {
-            // Filter out system apps to avoid clutter
-            val isSystemApp = (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
-            val isUpdatedSystemApp = (appInfo.flags and ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0
-            
-            if (!isSystemApp || isUpdatedSystemApp) {
+        val id = treeUri.toString().hashCode().toLong()
+        val name = documentFile.name ?: "Folder"
+        
+        return SharedFile(
+            id = id,
+            name = name,
+            path = treeUri.toString(),
+            uri = treeUri,
+            size = 0L, // Folders don't have a fixed size
+            mimeType = "application/x-directory",
+            category = FileCategory.CUSTOM_FOLDERS,
+            lastModified = System.currentTimeMillis()
+        )
+    }
+
+    fun getInstalledApps(): List<SharedFile> {
+        val pm = context.packageManager
+        val packages = pm.getInstalledApplications(PackageManager.GET_META_DATA)
+        val apps = mutableListOf<SharedFile>()
+
+        for (appInfo in packages) {
+            // Filter out system apps unless they are updated
+            if ((appInfo.flags and ApplicationInfo.FLAG_SYSTEM) == 0 || 
+                (appInfo.flags and ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0) {
+                
                 val file = File(appInfo.sourceDir)
                 if (file.exists()) {
                     val appName = pm.getApplicationLabel(appInfo).toString()
-                    // append .apk so that it downloads correctly
-                    val fileName = if (appName.endsWith(".apk", ignoreCase = true)) appName else "$appName.apk"
-                    
-                    files.add(
+                    apps.add(
                         SharedFile(
                             id = file.absolutePath.hashCode().toLong(),
-                            name = fileName,
+                            name = "$appName.apk",
                             path = file.absolutePath,
                             uri = Uri.fromFile(file),
                             size = file.length(),
@@ -285,76 +110,12 @@ class FileRepository(private val context: Context) {
                 }
             }
         }
-        
-        return files.sortedBy { it.name.lowercase() }
+        return apps.sortedBy { it.name.lowercase() }
     }
 
-    private fun getMimeType(filename: String): String {
-        val extension = filename.substringAfterLast('.', "").lowercase()
-        return when (extension) {
-            "mp4", "mkv", "avi", "mov", "webm" -> "video/$extension"
-            "mp3", "wav", "flac", "aac", "ogg" -> "audio/$extension"
-            "jpg", "jpeg" -> "image/jpeg"
-            "png" -> "image/png"
-            "gif" -> "image/gif"
-            "webp" -> "image/webp"
-            "pdf" -> "application/pdf"
-            "doc" -> "application/msword"
-            "docx" -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            "xls" -> "application/vnd.ms-excel"
-            "xlsx" -> "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            "txt" -> "text/plain"
-            "zip" -> "application/zip"
-            "rar" -> "application/x-rar-compressed"
-            "apk" -> "application/vnd.android.package-archive"
-            else -> "application/octet-stream"
-        }
-    }
-
-    private fun queryCustomFolders(customFolderUris: Set<String>): List<SharedFile> {
-        val files = mutableListOf<SharedFile>()
-        
-        for (uriString in customFolderUris) {
-            try {
-                val treeUri = Uri.parse(uriString)
-                val documentFile = androidx.documentfile.provider.DocumentFile.fromTreeUri(context, treeUri)
-                
-                if (documentFile != null && documentFile.isDirectory) {
-                    val rootFolderName = documentFile.name ?: "Folder"
-                    collectFilesRecursively(documentFile, rootFolderName, files)
-                }
-            } catch (e: Exception) {
-                // Ignore inaccessible URIs
-            }
-        }
-        
-        return files.sortedByDescending { it.lastModified }
-    }
-
-    private fun collectFilesRecursively(
-        folder: androidx.documentfile.provider.DocumentFile,
-        currentPath: String,
-        resultList: MutableList<SharedFile>
-    ) {
-        folder.listFiles().forEach { childFile ->
-            if (childFile.isFile) {
-                val mimeType = childFile.type ?: getMimeType(childFile.name ?: "")
-                resultList.add(
-                    SharedFile(
-                        id = childFile.uri.toString().hashCode().toLong(),
-                        name = "${currentPath}/${childFile.name ?: "Unknown"}",
-                        path = childFile.uri.toString(),
-                        uri = childFile.uri,
-                        size = childFile.length(),
-                        mimeType = mimeType,
-                        category = FileCategory.CUSTOM_FOLDERS,
-                        lastModified = childFile.lastModified()
-                    )
-                )
-            } else if (childFile.isDirectory) {
-                val nextPath = "${currentPath}/${childFile.name ?: "Folder"}"
-                collectFilesRecursively(childFile, nextPath, resultList)
-            }
-        }
+    private fun getMimeType(fileName: String): String {
+        val extension = fileName.substringAfterLast('.', "").lowercase()
+        return android.webkit.MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension)
+            ?: "application/octet-stream"
     }
 }
