@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="app/src/main/res/drawable-nodpi/logo.png" alt="LocalShare Logo" width="120"/>
+  <img src="app/src/main/res/drawable/logo.png" alt="LocalShare Logo" width="120"/>
   <h1>LocalShare</h1>
   <p><strong>A beautifully crafted, blazing-fast, and deeply integrated offline file sharing app for Android.</strong></p>
   
