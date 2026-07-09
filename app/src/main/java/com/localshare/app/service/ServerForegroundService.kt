@@ -48,24 +48,33 @@ class ServerForegroundService : Service() {
         private val _connectedDeviceCount = MutableStateFlow(0)
         val connectedDeviceCount: StateFlow<Int> = _connectedDeviceCount.asStateFlow()
 
-        private var _server: FileShareServer? = null
-        val accessLog: AccessLogBuffer? get() = _server?.accessLog
+        var server: FileShareServer? = null
+            internal set
+        val accessLog: AccessLogBuffer? get() = server?.accessLog
 
         // Server settings from app settings
         private var _pin: String? = null
         private var _deviceName: String = "LocalShare"
         private var _maxConnections: Int = 3
         private var _enableNearbyDiscovery: Boolean = true
+        private var _encryptionEnabled: Boolean = false
 
         private val _newUploadedFiles = kotlinx.coroutines.flow.MutableSharedFlow<java.io.File>(extraBufferCapacity = 100)
         val newUploadedFiles: kotlinx.coroutines.flow.SharedFlow<java.io.File> = _newUploadedFiles.asSharedFlow()
+
+        private val _clearFilesEvent = kotlinx.coroutines.flow.MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+        val clearFilesEvent: kotlinx.coroutines.flow.SharedFlow<Unit> = _clearFilesEvent.asSharedFlow()
+
+        // Incoming transfer sessions from other devices
+        private val _incomingTransfers = kotlinx.coroutines.flow.MutableSharedFlow<com.localshare.app.data.TransferSession>(extraBufferCapacity = 10)
+        val incomingTransfers: kotlinx.coroutines.flow.SharedFlow<com.localshare.app.data.TransferSession> = _incomingTransfers.asSharedFlow()
 
         // Cache the latest share config in case the server isn't running yet
         private var _shareConfig: ShareConfig? = null
 
         fun updateShareConfig(config: ShareConfig) {
             _shareConfig = config
-            _server?.shareConfig = config
+            server?.shareConfig = config
         }
 
         // Cache the clipboard text in case the server isn't running yet
@@ -77,7 +86,11 @@ class ServerForegroundService : Service() {
          */
         fun updateServerClipboard(text: String) {
             _clipboardCache = text
-            _server?.setSharedText(text)
+            server?.setSharedText(text)
+        }
+
+        fun triggerClearFiles() {
+            _clearFilesEvent.tryEmit(Unit)
         }
 
         /**
@@ -86,23 +99,46 @@ class ServerForegroundService : Service() {
          * WITHOUT overwriting explicitly shared text.
          */
         fun syncSystemClipboard(text: String) {
-            _server?.updatePhoneClipboard(text)
+            server?.updatePhoneClipboard(text)
         }
 
         /**
          * Update server settings (PIN, device name, max connections) at runtime.
          */
-        fun updateServerSettings(pin: String?, deviceName: String, maxConnections: Int, enableNearbyDiscovery: Boolean = true) {
+        fun updateServerSettings(pin: String?, deviceName: String, maxConnections: Int, enableNearbyDiscovery: Boolean = true, encryptionEnabled: Boolean = false) {
             _pin = pin
             _deviceName = deviceName
             _maxConnections = maxConnections
             _enableNearbyDiscovery = enableNearbyDiscovery
+            _encryptionEnabled = encryptionEnabled
             // If server is already running, update it live
-            _server?.let { server ->
-                server.pin = pin
-                server.deviceName = deviceName
-                server.maxConnections = maxConnections
+            server?.let { s ->
+                s.pin = pin
+                s.deviceName = deviceName
+                s.maxConnections = maxConnections
+                if (encryptionEnabled && !s.hasEncryptionKey()) {
+                    s.generateEncryptionKey()
+                }
+                s.encryptionEnabled = encryptionEnabled
+                // Assign the instantiated server to the public property
+                server = s
+                val currentUrl = _serverUrl.value
+                val ip = currentUrl?.substringAfter("http://")?.substringBefore(":")
+                val baseUrl = if (ip != null) "http://$ip:$currentPort" else currentUrl
+                _serverUrl.value = if (encryptionEnabled && s.hasEncryptionKey() && baseUrl != null) {
+                    "$baseUrl?key=${s.getEncryptionKeyBase64()}"
+                } else {
+                    baseUrl
+                }
             }
+        }
+
+        fun acceptTransfer(sessionId: String): Boolean {
+            return server?.acceptSession(sessionId) ?: false
+        }
+
+        fun rejectTransfer(sessionId: String): Boolean {
+            return server?.rejectSession(sessionId) ?: false
         }
 
         fun start(context: Context) {
@@ -120,7 +156,6 @@ class ServerForegroundService : Service() {
         }
     }
 
-    private var server: FileShareServer? = null
     private var broadcaster: com.localshare.app.server.DiscoveryBroadcaster? = null
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
@@ -161,10 +196,19 @@ class ServerForegroundService : Service() {
                         it.pin = _pin
                         it.deviceName = _deviceName
                         it.maxConnections = _maxConnections
+                        it.encryptionEnabled = _encryptionEnabled
+                        if (_encryptionEnabled) {
+                            it.generateEncryptionKey()
+                        }
                         _shareConfig?.let { config -> it.shareConfig = config }
                         _clipboardCache?.let { text -> it.setSharedText(text) }
+                        it.onIncomingTransfer = { session ->
+                            _incomingTransfers.tryEmit(session)
+                            // Show notification for incoming transfer
+                            showIncomingTransferNotification(session)
+                        }
                         it.start()
-                        _server = it
+                        server = it
                         
                         serviceScope.launch(Dispatchers.IO) {
                             it.newUploadedFiles.collect { file ->
@@ -183,7 +227,12 @@ class ServerForegroundService : Service() {
                 throw Exception("Could not find an open port between 8080 and 8090")
             }
 
-            val url = "http://$ip:$currentPort"
+            val baseUrl = "http://$ip:$currentPort"
+            val url = if (_encryptionEnabled && server?.hasEncryptionKey() == true) {
+                "$baseUrl?key=${server!!.getEncryptionKeyBase64()}"
+            } else {
+                baseUrl
+            }
 
             _isRunning.value = true
             _serverUrl.value = url
@@ -231,7 +280,6 @@ class ServerForegroundService : Service() {
         try {
             server?.stop()
             server = null
-            _server = null
         } catch (e: Exception) {
             Log.e(TAG, "Error stopping server", e)
         }
@@ -248,6 +296,73 @@ class ServerForegroundService : Service() {
         broadcaster = null
 
         Log.i(TAG, "Server stopped")
+    }
+
+    private fun showIncomingTransferNotification(session: com.localshare.app.data.TransferSession) {
+        try {
+            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            val channelId = "localshare_incoming"
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                if (notificationManager.getNotificationChannel(channelId) == null) {
+                    val channel = NotificationChannel(
+                        channelId,
+                        "Incoming Transfers",
+                        NotificationManager.IMPORTANCE_HIGH
+                    ).apply {
+                        description = "Notifications for incoming file transfers"
+                    }
+                    notificationManager.createNotificationChannel(channel)
+                }
+            }
+
+            val acceptIntent = Intent(this, com.localshare.app.receiver.TransferActionReceiver::class.java).apply {
+                action = "ACTION_ACCEPT_TRANSFER"
+                putExtra("EXTRA_SESSION_ID", session.sessionId)
+                putExtra("EXTRA_NOTIFICATION_ID", session.sessionId.hashCode())
+            }
+            val acceptPendingIntent = android.app.PendingIntent.getBroadcast(
+                this, session.sessionId.hashCode(), acceptIntent,
+                android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+            )
+
+            val rejectIntent = Intent(this, com.localshare.app.receiver.TransferActionReceiver::class.java).apply {
+                action = "ACTION_REJECT_TRANSFER"
+                putExtra("EXTRA_SESSION_ID", session.sessionId)
+                putExtra("EXTRA_NOTIFICATION_ID", session.sessionId.hashCode())
+            }
+            val rejectPendingIntent = android.app.PendingIntent.getBroadcast(
+                this, session.sessionId.hashCode() + 1, rejectIntent,
+                android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+            )
+
+            val notification = Notification.Builder(this, channelId)
+                .setSmallIcon(android.R.drawable.stat_sys_download)
+                .setContentTitle("Incoming Transfer")
+                .setContentText("${session.senderName} wants to send ${session.files.size} files")
+                .setStyle(Notification.BigTextStyle().bigText(
+                    "${session.senderName} wants to send ${session.files.size} files (${formatSize(session.totalSize)})"
+                ))
+                .addAction(Notification.Action.Builder(
+                    null, "Accept", acceptPendingIntent
+                ).build())
+                .addAction(Notification.Action.Builder(
+                    null, "Reject", rejectPendingIntent
+                ).build())
+                .setAutoCancel(true)
+                .build()
+
+            notificationManager.notify(session.sessionId.hashCode(), notification)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to show incoming transfer notification", e)
+        }
+    }
+
+    private fun formatSize(bytes: Long): String = when {
+        bytes >= 1_073_741_824 -> String.format("%.1f GB", bytes / 1_073_741_824.0)
+        bytes >= 1_048_576 -> String.format("%.1f MB", bytes / 1_048_576.0)
+        bytes >= 1024 -> String.format("%.1f KB", bytes / 1024.0)
+        else -> "$bytes B"
     }
 
     private fun createNotificationChannel() {

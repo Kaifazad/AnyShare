@@ -3,9 +3,13 @@ package com.localshare.app.ui.screens
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.Image
-import com.localshare.app.ui.utils.bounceClick
-import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,19 +19,30 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material.icons.rounded.Public
+import androidx.compose.material.icons.rounded.Speed
+import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -35,27 +50,31 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.localshare.app.R
+import com.localshare.app.ui.utils.bounceClick
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun AboutScreen(onBackClick: () -> Unit) {
     val context = LocalContext.current
+
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
 
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
             LargeTopAppBar(
-                title = { Text("About LocalShare", fontWeight = FontWeight.Bold) },
+                title = { Text("About", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
                     }
                 },
                 scrollBehavior = scrollBehavior,
@@ -71,130 +90,335 @@ fun AboutScreen(onBackClick: () -> Unit) {
                 .fillMaxSize()
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 16.dp)
+                .padding(horizontal = 20.dp)
         ) {
+            Spacer(modifier = Modifier.height(8.dp))
 
-
-            // Open Source Info Card
-            AboutCard(title = "Why Open Source?") {
-                Text(
-                    text = "LocalShare was built with the vision of providing a fast, secure, and completely private way to share files across devices without relying on internet connectivity or cloud servers. By making it open source, we ensure complete transparency so you know exactly how your data is handled.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    lineHeight = MaterialTheme.typography.bodyMedium.lineHeight
+            // ─── Hero Card ────────────────────────────────────
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(28.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
                 )
-                Spacer(modifier = Modifier.height(12.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "Source Code:",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "github.com/Kaifazad/LocalShare",
-                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.bounceClick {
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/Kaifazad/LocalShare.git"))
-                            context.startActivity(intent)
+            ) {
+                Column(modifier = Modifier.padding(24.dp)) {
+                    // App info row
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Image(
+                            painter = painterResource(id = R.drawable.logo),
+                            contentDescription = "LocalShare Logo",
+                            modifier = Modifier
+                                .size(72.dp)
+                                .clip(RoundedCornerShape(20.dp))
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Column {
+                            Text(
+                                text = "LocalShare",
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Fast, private file sharing over Wi-Fi.\nNo internet required.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                lineHeight = MaterialTheme.typography.bodyMedium.lineHeight
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Version badge
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.secondaryContainer)
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
+                        Text(
+                            text = "Version v1.0.0",
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Tags
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        TagChip(icon = Icons.Rounded.Public, text = "Open Source")
+                        TagChip(icon = Icons.Rounded.Lock, text = "Secure")
+                        TagChip(icon = Icons.Rounded.Speed, text = "Fast Transfer")
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    // GitHub link
+                    SocialLinkCard(
+                        title = "GitHub",
+                        subtitle = "Kaifazad/LocalShare",
+                        gradient = Brush.linearGradient(
+                            listOf(Color(0xFF2D2D2D), Color(0xFF1A1A1A))
+                        ),
+                        iconContent = {
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_github),
+                                contentDescription = "GitHub",
+                                tint = Color.White,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        },
+                        onClick = {
+                            context.startActivity(
+                                Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/Kaifazad/LocalShare"))
+                            )
                         }
                     )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Developer card with Instagram link
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(20.dp))
+                            .clickable {
+                                context.startActivity(
+                                    Intent(Intent.ACTION_VIEW, Uri.parse("https://instagram.com/kaif.azad"))
+                                )
+                            },
+                        shape = RoundedCornerShape(20.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primaryContainer),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "KA",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(14.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Kaif Azad",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Developer & Creator",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_instagram),
+                                contentDescription = "Instagram",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
-            // Author Info Card
-            AboutCard(title = "Author Details") {
-                Text(
-                    text = "Kaif Azad",
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                
-                // GitHub
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "GitHub:",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(
-                        text = "github.com/kaifazad",
-                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.bounceClick {
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/kaifazad"))
-                            context.startActivity(intent)
-                        }
+            // ─── App Information Section ────────────────────────
+            Text(
+                text = "App Information",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
+
+            InfoItemCard(
+                icon = Icons.Rounded.Star,
+                title = "Rate LocalShare",
+                subtitle = "Star us on GitHub",
+                onClick = {
+                    context.startActivity(
+                        Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/Kaifazad/LocalShare"))
                     )
                 }
+            )
 
-                Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
-                // Instagram
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "Instagram:",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(
-                        text = "@kaif.azad",
-                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.bounceClick {
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://instagram.com/kaif.azad"))
-                            context.startActivity(intent)
-                        }
+            InfoItemCard(
+                icon = Icons.Rounded.Share,
+                title = "Share App",
+                subtitle = "Recommend LocalShare to others",
+                onClick = {
+                    val sendIntent = Intent().apply {
+                        action = Intent.ACTION_SEND
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_TEXT, "Check out LocalShare - fast file sharing over Wi-Fi!\nhttps://github.com/Kaifazad/LocalShare")
+                    }
+                    context.startActivity(Intent.createChooser(sendIntent, "Share LocalShare"))
+                }
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            InfoItemCard(
+                icon = Icons.Rounded.Delete,
+                title = "Privacy Policy",
+                subtitle = "Read our privacy commitment",
+                onClick = {
+                    context.startActivity(
+                        Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/Kaifazad/LocalShare/blob/main/PRIVACY.md"))
                     )
                 }
-            }
+            )
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Changelog Card
-            AboutCard(title = "Changelog - v1.0.0") {
-                Text(
-                    text = "• Initial release of LocalShare\n" +
-                           "• Fast Wi-Fi direct file sharing\n" +
-                           "• Clean Material 3 UI\n" +
-                           "• Secure PIN protection\n" +
-                           "• Dark/Light mode support",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    lineHeight = MaterialTheme.typography.bodyMedium.lineHeight
-                )
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(40.dp))
         }
     }
 }
 
 @Composable
-private fun AboutCard(title: String, content: @Composable () -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
-        ),
-        shape = RoundedCornerShape(24.dp)
+private fun TagChip(icon: ImageVector, text: String) {
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(modifier = Modifier.padding(20.dp)) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(16.dp)
+        )
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+    }
+}
+
+@Composable
+private fun SocialLinkCard(
+    title: String,
+    subtitle: String,
+    gradient: Brush,
+    iconContent: @Composable () -> Unit = {},
+    isLight: Boolean = false,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(gradient)
+            .clickable(onClick = onClick)
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        iconContent()
+        Spacer(modifier = Modifier.width(14.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = if (isLight) MaterialTheme.colorScheme.onSurface else Color.White
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = if (isLight) MaterialTheme.colorScheme.onSurfaceVariant else Color.White.copy(alpha = 0.7f)
+            )
+        }
+        Icon(
+            imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+            contentDescription = null,
+            tint = if (isLight) MaterialTheme.colorScheme.onSurfaceVariant else Color.White.copy(alpha = 0.5f),
+            modifier = Modifier
+                .size(20.dp)
+                .padding(2.dp)
+        )
+    }
+}
+
+@Composable
+private fun InfoItemCard(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .clickable(onClick = onClick)
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(22.dp)
+            )
+        }
+        Spacer(modifier = Modifier.width(14.dp))
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface
             )
-            Spacer(modifier = Modifier.height(12.dp))
-            content()
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
+        Icon(
+            imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier
+                .size(18.dp)
+                .padding(2.dp)
+        )
     }
 }

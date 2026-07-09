@@ -851,6 +851,10 @@ body::before{
         <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
         Upload to Phone
       </button>
+      <button id="clearAllBtn" style="height: 48px; border-radius: var(--r12); flex-shrink: 0; background: var(--bg3); color: var(--txt); border: 1px solid var(--line2); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 0 16px; font-weight: 600; font-size: 14px;">
+        <svg viewBox="0 0 24 24" style="width: 18px; height: 18px; stroke: var(--txt); stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round;"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        Clear All
+      </button>
     </div>
 
     <!-- filters -->
@@ -983,6 +987,19 @@ body::before{
         <svg viewBox="0 0 24 24"><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
         Send to Phone
       </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── CUSTOM CONFIRM MODAL ── -->
+<div class="upload-overlay" id="confirmOverlay">
+  <div class="upload-modal" style="max-width: 400px; text-align: center; padding: 32px 24px;">
+    <svg viewBox="0 0 24 24" style="width: 48px; height: 48px; stroke: var(--red); stroke-width: 1.5; fill: none; stroke-linecap: round; stroke-linejoin: round; margin-bottom: 16px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    <div class="upload-title" id="confirmTitle" style="font-size: 20px; margin-bottom: 8px;">Are you sure?</div>
+    <div class="upload-sub" id="confirmMessage" style="font-size: 14px; margin-bottom: 24px;">This action cannot be undone.</div>
+    <div class="upload-actions" style="justify-content: center; gap: 12px; margin-top: 0;">
+      <button class="upload-cancel" id="confirmCancel" style="flex: 1;">Cancel</button>
+      <button class="upload-send" id="confirmOk" style="flex: 1; background: var(--red);">Yes, clear</button>
     </div>
   </div>
 </div>
@@ -1441,6 +1458,45 @@ function bootUpload() {
       });
     });
   }
+
+  function showConfirm(title, message) {
+    return new Promise(resolve => {
+      const overlay = document.getElementById('confirmOverlay');
+      document.getElementById('confirmTitle').textContent = title;
+      document.getElementById('confirmMessage').textContent = message;
+      
+      const onOk = () => {
+        overlay.classList.remove('open');
+        cleanup();
+        resolve(true);
+      };
+      
+      const onCancel = () => {
+        overlay.classList.remove('open');
+        cleanup();
+        resolve(false);
+      };
+      
+      const cleanup = () => {
+        document.getElementById('confirmOk').removeEventListener('click', onOk);
+        document.getElementById('confirmCancel').removeEventListener('click', onCancel);
+      };
+      
+      document.getElementById('confirmOk').addEventListener('click', onOk);
+      document.getElementById('confirmCancel').addEventListener('click', onCancel);
+      
+      overlay.classList.add('open');
+    });
+  }
+
+  document.getElementById('clearAllBtn').addEventListener('click', async () => {
+    const confirmed = await showConfirm('Clear All Shared Files?', 'This will stop sharing all files currently on the list. Are you sure you want to proceed?');
+    if (!confirmed) return;
+    try {
+      await fetch('/api/files/clear', { method: 'POST' });
+      fetchFiles();
+    } catch(e) {}
+  });
 
   uploadSend.addEventListener('click', async () => {
     if (pendingFiles.length === 0) return;

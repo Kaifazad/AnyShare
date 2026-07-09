@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.localshare.app.data.AccessLogEntry
 import com.localshare.app.data.AppSettings
 import com.localshare.app.data.ColorPalette
+import com.localshare.app.data.CrashReport
+import com.localshare.app.data.CrashRepository
 import com.localshare.app.data.FileCategory
 import com.localshare.app.data.FileRepository
 import com.localshare.app.data.ShareConfig
@@ -16,6 +18,9 @@ import com.localshare.app.service.ServerForegroundService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /**
@@ -38,6 +43,18 @@ class FileShareViewModel(application: Application) : AndroidViewModel(applicatio
     private val _shareConfig = MutableStateFlow(ShareConfig())
     val shareConfig: StateFlow<ShareConfig> = _shareConfig.asStateFlow()
 
+    // ─── Multi-Select State ─────────────────────────────────────
+
+    private val _selectedFileIds = MutableStateFlow<Set<Long>>(emptySet())
+    val selectedFileIds: StateFlow<Set<Long>> = _selectedFileIds.asStateFlow()
+
+    val isMultiSelectMode: StateFlow<Boolean> = _selectedFileIds.map { it.isNotEmpty() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    // Pending uploads from web UI (not yet accepted)
+    private val _pendingUploads = MutableStateFlow<List<SharedFile>>(emptyList())
+    val pendingUploads: StateFlow<List<SharedFile>> = _pendingUploads.asStateFlow()
+
     // ─── Access Logs ────────────────────────────────────────────
 
     private val _accessLogs = MutableStateFlow<List<AccessLogEntry>>(emptyList())
@@ -48,29 +65,84 @@ class FileShareViewModel(application: Application) : AndroidViewModel(applicatio
     private val _appSettings = MutableStateFlow(AppSettings())
     val appSettings: StateFlow<AppSettings> = _appSettings.asStateFlow()
 
+    // ─── Crash Reports ──────────────────────────────────────────
+
+    private val crashRepository = CrashRepository(application)
+    private val _crashReports = MutableStateFlow<List<CrashReport>>(emptyList())
+    val crashReports: StateFlow<List<CrashReport>> = _crashReports.asStateFlow()
+    
+    // ─── App Updates ────────────────────────────────────────────
+
+    private val _updateInfo = MutableStateFlow<com.localshare.app.util.UpdateInfo?>(null)
+    val updateInfo: StateFlow<com.localshare.app.util.UpdateInfo?> = _updateInfo.asStateFlow()
+
+    fun checkForUpdates(currentVersion: String) {
+        viewModelScope.launch {
+            _updateInfo.value = com.localshare.app.util.UpdateChecker.checkForUpdate(currentVersion)
+        }
+    }
+
+    // ─── Incoming Transfer Sessions ────────────────────────────
+
+    private val _incomingTransfer = MutableStateFlow<com.localshare.app.data.TransferSession?>(null)
+    val incomingTransfer: StateFlow<com.localshare.app.data.TransferSession?> = _incomingTransfer.asStateFlow()
+
+    fun acceptTransfer(sessionId: String) {
+        viewModelScope.launch {
+            val accepted = com.localshare.app.service.ServerForegroundService.acceptTransfer(sessionId)
+            if (accepted) {
+                _incomingTransfer.value = _incomingTransfer.value?.copy(
+                    status = com.localshare.app.data.SessionStatus.ACTIVE
+                )
+            }
+        }
+    }
+
+    fun rejectTransfer(sessionId: String) {
+        viewModelScope.launch {
+            com.localshare.app.service.ServerForegroundService.rejectTransfer(sessionId)
+            _incomingTransfer.value = null
+        }
+    }
+
+    fun dismissIncomingTransfer() {
+        _incomingTransfer.value = null
+    }
+
     // Legacy compatibility — derived from settings
-    val isDarkMode: StateFlow<Boolean?> get() {
-        val mode = _appSettings.value.themeMode
-        val value = when (mode) {
+    val isDarkMode: StateFlow<Boolean?> = _appSettings.map { settings ->
+        when (settings.themeMode) {
             ThemeMode.SYSTEM -> null
             ThemeMode.LIGHT -> false
             ThemeMode.DARK -> true
         }
-        return MutableStateFlow(value)
-    }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     init {
         // Load persisted settings
         _appSettings.value = settingsRepository.load()
+
+        // Load crash reports
+        _crashReports.value = crashRepository.loadAll()
         
         // Sync server settings
         syncServerSettings()
+
+        // Sync haptic setting
+        com.localshare.app.ui.utils.HapticHelper.enabled = _appSettings.value.hapticEnabled
 
         // Periodically refresh logs
         viewModelScope.launch {
             while (true) {
                 refreshLogs()
                 kotlinx.coroutines.delay(3000)
+            }
+        }
+
+        // Listen for incoming transfer sessions from other devices
+        viewModelScope.launch {
+            com.localshare.app.service.ServerForegroundService.incomingTransfers.collect { session ->
+                _incomingTransfer.value = session
             }
         }
 
@@ -81,6 +153,13 @@ class FileShareViewModel(application: Application) : AndroidViewModel(applicatio
                 fileRepository.resolveUris(listOf(uri)).firstOrNull()?.let { sharedFile ->
                     addSharedFiles(listOf(sharedFile))
                 }
+            }
+        }
+
+        // Listen for remote clear commands
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.Main) {
+            ServerForegroundService.clearFilesEvent.collect {
+                clearSharedFiles()
             }
         }
 
@@ -136,11 +215,87 @@ class FileShareViewModel(application: Application) : AndroidViewModel(applicatio
         syncShareConfig()
     }
 
+    fun toggleFileSelection(fileId: Long) {
+        _selectedFileIds.value = _selectedFileIds.value.let { selected ->
+            if (fileId in selected) selected - fileId else selected + fileId
+        }
+    }
+
+    fun selectAllFiles() {
+        _selectedFileIds.value = _shareConfig.value.sharedFiles.map { it.id }.toSet()
+    }
+
+    fun clearSelection() {
+        _selectedFileIds.value = emptySet()
+    }
+
+    fun removeSelectedFiles() {
+        val ids = _selectedFileIds.value
+        _shareConfig.value = _shareConfig.value.removeFiles(ids)
+        _selectedFileIds.value = emptySet()
+        syncShareConfig()
+    }
+
+    fun getFileById(id: Long): SharedFile? {
+        return _shareConfig.value.sharedFiles.find { it.id == id }
+    }
+
     private fun syncShareConfig() {
         ServerForegroundService.updateShareConfig(_shareConfig.value)
     }
 
-    // ─── Log Actions ────────────────────────────────────────────
+    // ─── Pending Upload Actions ────────────────────────────────
+
+    fun acceptUpload(file: SharedFile) {
+        _pendingUploads.value = _pendingUploads.value.filter { it.id != file.id }
+        addSharedFiles(listOf(file))
+    }
+
+    fun removePendingUpload(file: SharedFile) {
+        _pendingUploads.value = _pendingUploads.value.filter { it.id != file.id }
+    }
+
+    fun clearPendingUploads() {
+        _pendingUploads.value = emptyList()
+    }
+
+    fun saveUploadedFile(file: SharedFile) {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val pendingFile = java.io.File(file.path)
+                if (!pendingFile.exists()) return@launch
+
+                val downloadsDir = android.os.Environment.getExternalStoragePublicDirectory(
+                    android.os.Environment.DIRECTORY_DOWNLOADS
+                )
+                val localShareDir = java.io.File(downloadsDir, "LocalShare")
+                if (!localShareDir.exists()) localShareDir.mkdirs()
+
+                val destFile = java.io.File(localShareDir, file.name)
+                val finalDest = if (destFile.exists()) {
+                    val base = destFile.nameWithoutExtension
+                    val ext = destFile.extension
+                    var counter = 1
+                    var candidate: java.io.File
+                    do {
+                        candidate = java.io.File(localShareDir, "${base}_${counter}.${ext}")
+                        counter++
+                    } while (candidate.exists())
+                    candidate
+                } else destFile
+
+                pendingFile.copyTo(finalDest, overwrite = true)
+                android.media.MediaScannerConnection.scanFile(
+                    getApplication(),
+                    arrayOf(finalDest.absolutePath),
+                    null,
+                    null
+                )
+            } catch (e: Exception) {
+                android.util.Log.e("FileShareViewModel", "Error saving uploaded file", e)
+            }
+        }
+    }
 
     private fun refreshLogs() {
         val log = ServerForegroundService.accessLog
@@ -152,6 +307,11 @@ class FileShareViewModel(application: Application) : AndroidViewModel(applicatio
         _accessLogs.value = emptyList()
     }
 
+    fun clearCrashReports() {
+        crashRepository.clear()
+        _crashReports.value = emptyList()
+    }
+
     // ─── Settings Actions ───────────────────────────────────────
 
     private fun updateSettings(transform: (AppSettings) -> AppSettings) {
@@ -159,6 +319,7 @@ class FileShareViewModel(application: Application) : AndroidViewModel(applicatio
         _appSettings.value = newSettings
         settingsRepository.save(newSettings)
         syncServerSettings()
+        com.localshare.app.ui.utils.HapticHelper.enabled = newSettings.hapticEnabled
     }
 
     fun setThemeMode(mode: ThemeMode) = updateSettings { it.copy(themeMode = mode) }
@@ -172,6 +333,16 @@ class FileShareViewModel(application: Application) : AndroidViewModel(applicatio
     fun setMaxConnections(max: Int) = updateSettings { it.copy(maxConnections = max.coerceIn(1, 5)) }
 
     fun setEnableNearbyDiscovery(enable: Boolean) = updateSettings { it.copy(enableNearbyDiscovery = enable) }
+
+    fun setAmoledMode(enabled: Boolean) = updateSettings { it.copy(amoledMode = enabled) }
+
+    fun setHapticEnabled(enabled: Boolean) = updateSettings { it.copy(hapticEnabled = enabled) }
+
+    fun setThemeColorSeed(seed: String) = updateSettings { it.copy(themeColorSeed = seed, colorPalette = ColorPalette.SYSTEM) }
+
+    fun setEncryptionEnabled(enabled: Boolean) = updateSettings { it.copy(encryptionEnabled = enabled) }
+
+    fun completeOnboarding() = updateSettings { it.copy(onboardingCompleted = true) }
 
     fun randomizeDeviceName() {
         val name = SettingsRepository.generateCuteName()
@@ -194,7 +365,8 @@ class FileShareViewModel(application: Application) : AndroidViewModel(applicatio
             pin = settings.pin,
             deviceName = settings.deviceName,
             maxConnections = settings.maxConnections,
-            enableNearbyDiscovery = settings.enableNearbyDiscovery
+            enableNearbyDiscovery = settings.enableNearbyDiscovery,
+            encryptionEnabled = settings.encryptionEnabled
         )
     }
 }

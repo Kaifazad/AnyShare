@@ -86,9 +86,12 @@ object RangeRequestHandler {
         }
     }
 
+    private const val MAX_INT_CONTENT_LENGTH = 2_147_483_647L // Int.MAX_VALUE
+
     /**
      * Create a NanoHTTPD response for a physical file.
      * Supports Range requests (206) and full downloads (200).
+     * For files > 2GB, uses chunked transfer to avoid NanoHTTPD's int overflow.
      */
     fun createResponse(
         file: File,
@@ -99,40 +102,62 @@ object RangeRequestHandler {
         val rangeInfo = parseRange(rangeHeader, totalSize)
 
         return if (rangeInfo != null) {
-            // 206 Partial Content
             val fis = FileInputStream(file)
             fis.channel.position(rangeInfo.start)
 
-            // Wrap in BoundedInputStream so NanoHTTPD never reads past the range end
-            val bounded = BoundedInputStream(fis, rangeInfo.contentLength)
-
-            val response = NanoHTTPD.newFixedLengthResponse(
-                NanoHTTPD.Response.Status.PARTIAL_CONTENT,
-                mimeType,
-                bounded,
-                rangeInfo.contentLength
-            )
-
-            response.addHeader("Content-Range", rangeInfo.contentRangeHeader)
-            response.addHeader("Accept-Ranges", "bytes")
-            response.addHeader("Connection", "keep-alive")
-            addCorsHeaders(response)
-            response
+            if (rangeInfo.contentLength <= MAX_INT_CONTENT_LENGTH) {
+                val bounded = BoundedInputStream(fis, rangeInfo.contentLength)
+                val response = NanoHTTPD.newFixedLengthResponse(
+                    NanoHTTPD.Response.Status.PARTIAL_CONTENT,
+                    mimeType,
+                    bounded,
+                    rangeInfo.contentLength
+                )
+                response.addHeader("Content-Range", rangeInfo.contentRangeHeader)
+                response.addHeader("Accept-Ranges", "bytes")
+                response.addHeader("Connection", "keep-alive")
+                addCorsHeaders(response)
+                response
+            } else {
+                val bounded = BoundedInputStream(fis, rangeInfo.contentLength)
+                val response = NanoHTTPD.newChunkedResponse(
+                    NanoHTTPD.Response.Status.PARTIAL_CONTENT,
+                    mimeType,
+                    bounded
+                )
+                response.addHeader("Content-Range", rangeInfo.contentRangeHeader)
+                response.addHeader("Content-Length", rangeInfo.contentLength.toString())
+                response.addHeader("Accept-Ranges", "bytes")
+                response.addHeader("Connection", "keep-alive")
+                addCorsHeaders(response)
+                response
+            }
         } else {
-            // 200 OK — full file
             val fis = FileInputStream(file)
-            val bounded = BoundedInputStream(fis, totalSize)
 
-            val response = NanoHTTPD.newFixedLengthResponse(
-                NanoHTTPD.Response.Status.OK,
-                mimeType,
-                bounded,
-                totalSize
-            )
-
-            response.addHeader("Accept-Ranges", "bytes")
-            addCorsHeaders(response)
-            response
+            if (totalSize <= MAX_INT_CONTENT_LENGTH) {
+                val bounded = BoundedInputStream(fis, totalSize)
+                val response = NanoHTTPD.newFixedLengthResponse(
+                    NanoHTTPD.Response.Status.OK,
+                    mimeType,
+                    bounded,
+                    totalSize
+                )
+                response.addHeader("Accept-Ranges", "bytes")
+                addCorsHeaders(response)
+                response
+            } else {
+                val bounded = BoundedInputStream(fis, totalSize)
+                val response = NanoHTTPD.newChunkedResponse(
+                    NanoHTTPD.Response.Status.OK,
+                    mimeType,
+                    bounded
+                )
+                response.addHeader("Content-Length", totalSize.toString())
+                response.addHeader("Accept-Ranges", "bytes")
+                addCorsHeaders(response)
+                response
+            }
         }
     }
 
@@ -148,13 +173,11 @@ object RangeRequestHandler {
         val rangeInfo = parseRange(rangeHeader, totalSize)
 
         return if (rangeInfo != null) {
-            // Reliable skip — InputStream.skip() can short-read
             var skipped = 0L
             while (skipped < rangeInfo.start) {
                 val s = inputStream.skip(rangeInfo.start - skipped)
                 if (s <= 0) {
-                    // skip() returned 0 — try read() to advance past unreadable bytes
-                    if (inputStream.read() == -1) break  // true EOF
+                    if (inputStream.read() == -1) break
                     skipped++
                     continue
                 }
@@ -163,31 +186,55 @@ object RangeRequestHandler {
 
             val bounded = BoundedInputStream(inputStream, rangeInfo.contentLength)
 
-            val response = NanoHTTPD.newFixedLengthResponse(
-                NanoHTTPD.Response.Status.PARTIAL_CONTENT,
-                mimeType,
-                bounded,
-                rangeInfo.contentLength
-            )
-
-            response.addHeader("Content-Range", rangeInfo.contentRangeHeader)
-            response.addHeader("Accept-Ranges", "bytes")
-            response.addHeader("Connection", "keep-alive")
-            addCorsHeaders(response)
-            response
+            if (rangeInfo.contentLength <= MAX_INT_CONTENT_LENGTH) {
+                val response = NanoHTTPD.newFixedLengthResponse(
+                    NanoHTTPD.Response.Status.PARTIAL_CONTENT,
+                    mimeType,
+                    bounded,
+                    rangeInfo.contentLength
+                )
+                response.addHeader("Content-Range", rangeInfo.contentRangeHeader)
+                response.addHeader("Accept-Ranges", "bytes")
+                response.addHeader("Connection", "keep-alive")
+                addCorsHeaders(response)
+                response
+            } else {
+                val response = NanoHTTPD.newChunkedResponse(
+                    NanoHTTPD.Response.Status.PARTIAL_CONTENT,
+                    mimeType,
+                    bounded
+                )
+                response.addHeader("Content-Range", rangeInfo.contentRangeHeader)
+                response.addHeader("Content-Length", rangeInfo.contentLength.toString())
+                response.addHeader("Accept-Ranges", "bytes")
+                response.addHeader("Connection", "keep-alive")
+                addCorsHeaders(response)
+                response
+            }
         } else {
             val bounded = BoundedInputStream(inputStream, totalSize)
 
-            val response = NanoHTTPD.newFixedLengthResponse(
-                NanoHTTPD.Response.Status.OK,
-                mimeType,
-                bounded,
-                totalSize
-            )
-
-            response.addHeader("Accept-Ranges", "bytes")
-            addCorsHeaders(response)
-            response
+            if (totalSize <= MAX_INT_CONTENT_LENGTH) {
+                val response = NanoHTTPD.newFixedLengthResponse(
+                    NanoHTTPD.Response.Status.OK,
+                    mimeType,
+                    bounded,
+                    totalSize
+                )
+                response.addHeader("Accept-Ranges", "bytes")
+                addCorsHeaders(response)
+                response
+            } else {
+                val response = NanoHTTPD.newChunkedResponse(
+                    NanoHTTPD.Response.Status.OK,
+                    mimeType,
+                    bounded
+                )
+                response.addHeader("Content-Length", totalSize.toString())
+                response.addHeader("Accept-Ranges", "bytes")
+                addCorsHeaders(response)
+                response
+            }
         }
     }
 

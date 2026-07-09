@@ -1,4 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">LocalShare</string>
+    <string name="shortcut_start_server">Start Server</string>
+    <string name="shortcut_start_server_long">Start sharing files over Wi-Fi</string>
+    <string name="shortcut_open_files">Open Files</string>
+    <string name="shortcut_open_files_long">Browse shared files</string>
+    <string name="widget_description">Quick toggle for the LocalShare server</string>
 </resources>

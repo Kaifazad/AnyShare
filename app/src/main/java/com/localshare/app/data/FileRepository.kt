@@ -23,24 +23,27 @@ class FileRepository(private val context: Context) {
         var mimeType = "application/octet-stream"
 
         if (uri.scheme == "content") {
-            val docFile = DocumentFile.fromSingleUri(context, uri)
-            if (docFile != null && docFile.name != null) {
-                name = docFile.name!!
-                size = docFile.length()
-            } else {
-                context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
-                    if (cursor.moveToFirst()) {
-                        val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
-                        if (nameIndex != -1) {
-                            name = cursor.getString(nameIndex) ?: "Unknown"
-                        }
-                        val sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE)
-                        if (sizeIndex != -1) {
-                            size = cursor.getLong(sizeIndex)
-                        }
-                    }
+            // Standard document query
+            context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val dnIdx = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                    val szIdx = cursor.getColumnIndex(OpenableColumns.SIZE)
+                    if (dnIdx != -1) cursor.getString(dnIdx)?.let { if (it.isNotEmpty()) name = it }
+                    if (szIdx != -1) size = cursor.getLong(szIdx)
                 }
             }
+
+            // If name is still numeric (photo picker issue), resolve via MediaStore
+            if (name.matches(Regex("^\\d+$"))) {
+                val mediaId = name
+                name = resolveNameFromMediaStore(mediaId) ?: name
+            }
+
+            // If still numeric, try last path segment
+            if (name.matches(Regex("^\\d+$"))) {
+                uri.lastPathSegment?.let { if (it.isNotEmpty() && !it.matches(Regex("^\\d+$"))) name = it }
+            }
+
             mimeType = context.contentResolver.getType(uri) ?: mimeType
         } else if (uri.scheme == "file") {
             val file = File(uri.path ?: "")
@@ -55,7 +58,7 @@ class FileRepository(private val context: Context) {
         return SharedFile(
             id = id,
             name = name,
-            path = uri.toString(), // We store the URI string in path for reference
+            path = uri.toString(),
             uri = uri,
             size = size,
             mimeType = mimeType,
@@ -66,20 +69,33 @@ class FileRepository(private val context: Context) {
 
     fun resolveFolder(treeUri: Uri): SharedFile? {
         val documentFile = DocumentFile.fromTreeUri(context, treeUri) ?: return null
-        
+
         val id = treeUri.toString().hashCode().toLong()
         val name = documentFile.name ?: "Folder"
-        
+        val size = calculateFolderSize(documentFile)
+
         return SharedFile(
             id = id,
             name = name,
             path = treeUri.toString(),
             uri = treeUri,
-            size = 0L, // Folders don't have a fixed size
+            size = size,
             mimeType = "application/x-directory",
             category = FileCategory.CUSTOM_FOLDERS,
             lastModified = System.currentTimeMillis()
         )
+    }
+
+    private fun calculateFolderSize(documentFile: DocumentFile): Long {
+        var totalSize = 0L
+        documentFile.listFiles().forEach { child ->
+            if (child.isDirectory) {
+                totalSize += calculateFolderSize(child)
+            } else {
+                totalSize += child.length()
+            }
+        }
+        return totalSize
     }
 
     fun getInstalledApps(): List<SharedFile> {
@@ -96,8 +112,8 @@ class FileRepository(private val context: Context) {
                 if (file.exists()) {
                     val appName = pm.getApplicationLabel(appInfo).toString()
                     apps.add(
-                        SharedFile(
-                            id = file.absolutePath.hashCode().toLong(),
+                    SharedFile(
+                        id = file.absolutePath.hashCode().toLong(),
                             name = "$appName.apk",
                             path = file.absolutePath,
                             uri = Uri.fromFile(file),
@@ -117,5 +133,34 @@ class FileRepository(private val context: Context) {
         val extension = fileName.substringAfterLast('.', "").lowercase()
         return android.webkit.MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension)
             ?: "application/octet-stream"
+    }
+
+    private fun resolveNameFromMediaStore(mediaId: String): String? {
+        val id = mediaId.toLongOrNull() ?: return null
+        val tables = arrayOf(
+            android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+            android.provider.MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
+            android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+        )
+        for (tableUri in tables) {
+            try {
+                val itemUri = android.content.ContentUris.withAppendedId(tableUri, id)
+                context.contentResolver.query(itemUri, arrayOf("_display_name", "_data"), null, null, null)?.use { cursor ->
+                    if (cursor.moveToFirst()) {
+                        val dnIdx = cursor.getColumnIndex("_display_name")
+                        val dataIdx = cursor.getColumnIndex("_data")
+                        val displayName = if (dnIdx != -1) cursor.getString(dnIdx) else null
+                        val dataPath = if (dataIdx != -1) cursor.getString(dataIdx) else null
+                        // Prefer _data path extraction over _display_name
+                        if (!dataPath.isNullOrEmpty()) {
+                            val fileName = File(dataPath).name
+                            if (fileName.isNotEmpty() && !fileName.matches(Regex("^\\d+$"))) return fileName
+                        }
+                        if (!displayName.isNullOrEmpty() && !displayName.matches(Regex("^\\d+$"))) return displayName
+                    }
+                }
+            } catch (_: Exception) { }
+        }
+        return null
     }
 }

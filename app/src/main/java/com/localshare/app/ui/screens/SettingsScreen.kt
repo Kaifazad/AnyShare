@@ -1,30 +1,33 @@
 package com.localshare.app.ui.screens
 
+import android.content.Context
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.MutableTransitionState
-import androidx.compose.animation.core.animateDp
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.rememberTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -35,37 +38,30 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Casino
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.rounded.Brush
 import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.DeleteSweep
+import androidx.compose.material.icons.rounded.FolderOpen
+import androidx.compose.material.icons.rounded.Image
+import androidx.compose.material.icons.automirrored.rounded.InsertDriveFile
+import androidx.compose.material.icons.rounded.InsertDriveFile
+import androidx.compose.material.icons.rounded.Storage
+import androidx.compose.material.icons.rounded.Videocam
 import androidx.compose.material.icons.rounded.Devices
 import androidx.compose.material.icons.rounded.Info
-import androidx.compose.material.icons.rounded.Help
+import androidx.compose.material.icons.automirrored.rounded.Help
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.*
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -75,49 +71,42 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
-import com.localshare.app.R
-import com.localshare.app.data.ColorPalette
+import kotlinx.coroutines.withContext
 import com.localshare.app.data.ThemeMode
+import com.localshare.app.data.ColorPalette
 import com.localshare.app.ui.FileShareViewModel
+import com.localshare.app.ui.theme.colorSchemeFromSeed
+import com.localshare.app.ui.theme.neutralColorScheme
+import android.os.Build
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
+import androidx.compose.ui.platform.LocalContext
 import com.localshare.app.ui.utils.bounceClick
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.PhoneAndroid
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.material.icons.rounded.SystemUpdate
 
-// ─── Settings Category Data ─────────────────────────────────────────
-
-private data class SettingsCategoryItem(
-    val title: String,
-    val subtitle: String,
-    val icon: ImageVector,
-    val bgColor: @Composable () -> Color,
-    val iconColor: @Composable () -> Color
-)
+// ─── Main Settings Screen ──────────────────────────────────────────
 
 @Composable
-fun SettingsScreen(viewModel: FileShareViewModel, onNavigateToAbout: () -> Unit) {
+fun SettingsScreen(
+    viewModel: FileShareViewModel,
+    onNavigateToAbout: () -> Unit,
+    onSubPageChanged: ((Boolean) -> Unit)? = null
+) {
     val settings by viewModel.appSettings.collectAsState()
-
-    val systemIsDark = isSystemInDarkTheme()
-    val useDarkTheme = when (settings.themeMode) {
-        ThemeMode.SYSTEM -> systemIsDark
-        ThemeMode.LIGHT -> false
-        ThemeMode.DARK -> true
-    }
 
     var showHowToUseDialog by remember { mutableStateOf(false) }
 
@@ -136,15 +125,12 @@ fun SettingsScreen(viewModel: FileShareViewModel, onNavigateToAbout: () -> Unit)
                     Text("1. Connect to Wi-Fi", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                     Text("Make sure both this device and the receiving device are connected to the same Wi-Fi network or hotspot.", style = MaterialTheme.typography.bodyMedium)
                     Spacer(modifier = Modifier.height(12.dp))
-                    
                     Text("2. Select Files", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                     Text("Go to the Home or Files tab to pick the items you want to share.", style = MaterialTheme.typography.bodyMedium)
                     Spacer(modifier = Modifier.height(12.dp))
-
                     Text("3. Start Server", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                     Text("Ensure the server is running. You will see a green 'Server Running' indicator.", style = MaterialTheme.typography.bodyMedium)
                     Spacer(modifier = Modifier.height(12.dp))
-
                     Text("4. Download on Receiver", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                     Text("Open the web browser on the receiving device and type the URL shown on the Home tab, or use the Nearby tab if the receiver is using the LocalShare app.", style = MaterialTheme.typography.bodyMedium)
                 }
@@ -157,31 +143,100 @@ fun SettingsScreen(viewModel: FileShareViewModel, onNavigateToAbout: () -> Unit)
         )
     }
 
-    // Entrance animation
     var isVisible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { isVisible = true }
+    
+    val updateInfo by viewModel.updateInfo.collectAsState()
 
-    val contentAlpha by androidx.compose.animation.core.animateFloatAsState(
+    val contentAlpha by animateFloatAsState(
         targetValue = if (isVisible) 1f else 0f,
         animationSpec = tween(durationMillis = 500),
         label = "ContentAlpha"
     )
-
-    val contentOffset by androidx.compose.animation.core.animateDpAsState(
+    val contentOffset by animateDpAsState(
         targetValue = if (isVisible) 0.dp else 40.dp,
         animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing),
         label = "ContentOffset"
     )
 
     val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
-
-    // State for expanded settings sections
     var selectedCategoryIndex by remember { mutableStateOf<Int?>(null) }
 
     BackHandler(enabled = selectedCategoryIndex != null) {
         selectedCategoryIndex = null
     }
 
+    // Report sub-page state to parent
+    LaunchedEffect(selectedCategoryIndex) {
+        onSubPageChanged?.invoke(selectedCategoryIndex != null)
+    }
+
+    val categories = listOf(
+        Triple("Appearance", "Theme, colors & visual style", Icons.Rounded.Brush),
+        Triple("Security", "PIN protection & access", Icons.Rounded.Lock),
+        Triple("Device", "Name, connections & identity", Icons.Rounded.Devices),
+        Triple("Storage", "Folder size, images & videos", Icons.Rounded.Storage),
+        Triple("Updates", "Release notes & bug fixes", Icons.Rounded.SystemUpdate),
+        Triple("About", "Version, developer & source", Icons.Rounded.Info),
+        Triple("How to Use", "Simple guide on using this app", Icons.AutoMirrored.Rounded.Help)
+    )
+
+    AnimatedContent(
+        targetState = selectedCategoryIndex,
+        transitionSpec = {
+            if (targetState != null) {
+                slideInHorizontally(initialOffsetX = { it }) togetherWith slideOutHorizontally(targetOffsetX = { -it })
+            } else {
+                slideInHorizontally(initialOffsetX = { -it }) togetherWith slideOutHorizontally(targetOffsetX = { it })
+            }
+        },
+        label = "SettingsNav"
+    ) { categoryIndex ->
+        if (categoryIndex == null) {
+            // ─── Main Settings List ────────────────────────────
+            MainSettingsList(
+                categories = categories,
+                isDark = isDark,
+                contentAlpha = contentAlpha,
+                contentOffset = contentOffset,
+                updateInfo = updateInfo,
+                onSelectCategory = { index ->
+                    when (index) {
+                        5 -> onNavigateToAbout()
+                        6 -> showHowToUseDialog = true
+                        else -> selectedCategoryIndex = index
+                    }
+                }
+            )
+        } else {
+            // ─── Sub-page with Scaffold + LargeTopAppBar ───────
+            SettingsSubPage(
+                title = categories[categoryIndex].first,
+                onBack = { selectedCategoryIndex = null }
+            ) { paddingValues ->
+                when (categoryIndex) {
+                    0 -> AppearanceContent(settings, viewModel, paddingValues)
+                    1 -> SecurityContent(settings, viewModel, paddingValues)
+                    2 -> DeviceContent(settings, viewModel, paddingValues)
+                    3 -> StorageContent(paddingValues)
+                    4 -> UpdatesContent(viewModel, updateInfo, paddingValues)
+                }
+            }
+        }
+    }
+}
+
+// ─── Main Settings List ──────────────────────────────────────────
+
+@Composable
+private fun MainSettingsList(
+    categories: List<Triple<String, String, ImageVector>>,
+    isDark: Boolean,
+    contentAlpha: Float,
+    contentOffset: androidx.compose.ui.unit.Dp,
+    updateInfo: com.localshare.app.util.UpdateInfo?,
+    onSelectCategory: (Int) -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -192,31 +247,6 @@ fun SettingsScreen(viewModel: FileShareViewModel, onNavigateToAbout: () -> Unit)
             }
             .padding(horizontal = 16.dp, vertical = 16.dp)
     ) {
-        val categories = listOf(
-            Triple("Appearance", "Theme, colors & visual style", Icons.Rounded.Brush),
-            Triple("Security", "PIN protection & access", Icons.Rounded.Lock),
-            Triple("Device", "Name, connections & identity", Icons.Rounded.Devices),
-            Triple("About", "Version, developer & source", Icons.Rounded.Info),
-            Triple("How to Use", "Simple guide on using this app", Icons.Rounded.Help)
-        )
-
-        androidx.compose.animation.AnimatedContent(
-            targetState = selectedCategoryIndex,
-            transitionSpec = {
-                if (targetState != null) {
-                    slideInHorizontally(initialOffsetX = { it }) togetherWith slideOutHorizontally(targetOffsetX = { -it })
-                } else {
-                    slideInHorizontally(initialOffsetX = { -it }) togetherWith slideOutHorizontally(targetOffsetX = { it })
-                }
-            },
-            label = "SettingsNav"
-        ) { categoryIndex ->
-            if (categoryIndex == null) {
-                Column(
-                    modifier = Modifier.fillMaxSize()
-                ) {
-            // ─── Expressive Settings Group ──────────────────────────
-
         val categoryColors = getCategoryColors(isDark)
 
         Column(
@@ -230,11 +260,7 @@ fun SettingsScreen(viewModel: FileShareViewModel, onNavigateToAbout: () -> Unit)
                 val colors = categoryColors[index]
 
                 Surface(
-                    onClick = {
-                        if (index == 3) onNavigateToAbout()
-                        else if (index == 4) showHowToUseDialog = true
-                        else selectedCategoryIndex = index
-                    },
+                    onClick = { onSelectCategory(index) },
                     shape = shape,
                     color = MaterialTheme.colorScheme.surfaceContainer,
                     modifier = Modifier
@@ -247,7 +273,6 @@ fun SettingsScreen(viewModel: FileShareViewModel, onNavigateToAbout: () -> Unit)
                             .padding(16.dp)
                             .fillMaxSize()
                     ) {
-                        // Icon Container
                         Box(
                             contentAlignment = Alignment.Center,
                             modifier = Modifier
@@ -255,12 +280,30 @@ fun SettingsScreen(viewModel: FileShareViewModel, onNavigateToAbout: () -> Unit)
                                 .clip(CircleShape)
                                 .background(colors.first)
                         ) {
-                            Icon(
-                                imageVector = icon,
-                                contentDescription = null,
-                                tint = colors.second,
-                                modifier = Modifier.size(24.dp)
-                            )
+                            if (title == "Updates" && updateInfo != null) {
+                                androidx.compose.material3.BadgedBox(
+                                    badge = {
+                                        androidx.compose.material3.Badge(
+                                            containerColor = Color.Red,
+                                            modifier = Modifier.padding(top = 4.dp, end = 4.dp)
+                                        )
+                                    }
+                                ) {
+                                    Icon(
+                                        imageVector = icon,
+                                        contentDescription = null,
+                                        tint = colors.second,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
+                            } else {
+                                Icon(
+                                    imageVector = icon,
+                                    contentDescription = null,
+                                    tint = colors.second,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
                         }
 
                         Spacer(modifier = Modifier.width(16.dp))
@@ -285,7 +328,6 @@ fun SettingsScreen(viewModel: FileShareViewModel, onNavigateToAbout: () -> Unit)
 
                         Spacer(modifier = Modifier.width(8.dp))
 
-                        // Chevron indicator for expandable items
                         if (index < 3) {
                             Icon(
                                 imageVector = Icons.Rounded.ChevronRight,
@@ -303,126 +345,440 @@ fun SettingsScreen(viewModel: FileShareViewModel, onNavigateToAbout: () -> Unit)
             }
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(16.dp))
+    }
+}
 
-        // ─── Footer ─────────────────────────────────────────────
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            androidx.compose.foundation.Image(
-                painter = androidx.compose.ui.res.painterResource(id = if (useDarkTheme) com.localshare.app.R.drawable.logo_dark else com.localshare.app.R.drawable.logo),
-                contentDescription = "LocalShare",
-                modifier = Modifier
-                    .size(64.dp)
-                    .clip(RoundedCornerShape(14.dp)),
-                contentScale = androidx.compose.ui.layout.ContentScale.Crop
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                text = "LocalShare",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "Version 1.0.0",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "Developer: Kaif Azad",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+// ─── Settings Sub-page Scaffold (like About page) ────────────────
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SettingsSubPage(
+    title: String,
+    onBack: () -> Unit,
+    content: @Composable (PaddingValues) -> Unit
+) {
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(rememberTopAppBarState())
+
+    Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        topBar = {
+            LargeTopAppBar(
+                title = { Text(title, fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                scrollBehavior = scrollBehavior,
+                colors = TopAppBarDefaults.largeTopAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface
+                )
             )
         }
+    ) { paddingValues ->
+        content(paddingValues)
+    }
+}
 
-        Spacer(modifier = Modifier.height(16.dp))
-        
-            } // End of Main List Column
-        } // End of categoryIndex == null
-        else { // Sub-screen
-            Column(
-                modifier = Modifier.fillMaxSize()
-            ) {
-                // Top Bar for sub-screen
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 24.dp)
-                ) {
-                    androidx.compose.material3.IconButton(
-                        onClick = { selectedCategoryIndex = null },
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                            contentDescription = "Back",
-                            tint = MaterialTheme.colorScheme.onSurface
+// ─── Appearance Content ──────────────────────────────────────────
+
+@Composable
+private fun AppearanceContent(settings: com.localshare.app.data.AppSettings, viewModel: FileShareViewModel, paddingValues: PaddingValues) {
+    val context = LocalContext.current
+    val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+
+    // Wallpaper dynamic colors (Android 12+)
+    val wallpaperScheme = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        if (isDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+    } else null
+
+    // Extract wallpaper seed colors
+    val wallpaperSeeds = remember(wallpaperScheme) {
+        if (wallpaperScheme != null) {
+            listOf(
+                "Primary" to wallpaperScheme.primary,
+                "Secondary" to wallpaperScheme.secondary,
+                "Tertiary" to wallpaperScheme.tertiary,
+            ).distinctBy { it.second }
+        } else emptyList()
+    }
+
+    // Preset seed colors
+    val presetSeeds = listOf(
+        "Blue" to 0xFF1565C0.toInt(),
+        "Teal" to 0xFF00695C.toInt(),
+        "Green" to 0xFF2E7D32.toInt(),
+        "Purple" to 0xFF6A1B9A.toInt(),
+        "Pink" to 0xFFAD1457.toInt(),
+        "Orange" to 0xFFE65100.toInt(),
+    )
+
+    var selectedTab by remember { mutableIntStateOf(0) }
+    val currentSeed = settings.themeColorSeed
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(paddingValues)
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp, vertical = 16.dp)
+    ) {
+        // ─── Color Section ────────────────────────────────────
+        Text(
+            text = "Color",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = "Icons, text, and more match colors in your wallpaper",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // Color circles
+        if (selectedTab == 0) {
+            // Wallpaper colors tab
+            if (wallpaperSeeds.isNotEmpty()) {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    // System option (full dynamic scheme)
+                    item {
+                        val isSelected = currentSeed == "system"
+                        SeedColorCircle(
+                            seedArgb = null,
+                            label = "System",
+                            isSelected = isSelected,
+                            scheme = wallpaperScheme,
+                            onClick = { viewModel.setThemeColorSeed("system") }
                         )
                     }
-                    Spacer(modifier = Modifier.width(16.dp))
+                    // Wallpaper-derived seeds
+                    items(wallpaperSeeds.size) { index ->
+                        val (name, color) = wallpaperSeeds[index]
+                        val hex = String.format("%08X", color.toArgb())
+                        val isSelected = currentSeed == hex
+                        SeedColorCircle(
+                            seedArgb = color.toArgb(),
+                            label = name,
+                            isSelected = isSelected,
+                            onClick = { viewModel.setThemeColorSeed(hex) }
+                        )
+                    }
+                }
+            } else {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainer
+                ) {
                     Text(
-                        text = categories[categoryIndex].first,
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
+                        text = "Dynamic colors require Android 12 or later",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(16.dp)
                     )
                 }
-
-                when (categoryIndex) {
-                    0 -> { // Appearance Section
-                        SettingsCard {
-                            ThemeSetting(
-                                selected = settings.themeMode,
-                                onSelect = { viewModel.setThemeMode(it) }
-                            )
-                            Spacer(modifier = Modifier.height(20.dp))
-                            ColorSetting(
-                                selected = settings.colorPalette,
-                                onSelect = { viewModel.setColorPalette(it) }
-                            )
-                        }
-                    }
-                    1 -> { // Security Section
-                        SettingsCard {
-                            PinSetting(
-                                currentPin = settings.pin,
-                                onPinChange = { viewModel.setPin(it) }
-                            )
-                        }
-                    }
-                    2 -> { // Device Section
-                        SettingsCard {
-                            DeviceNameSetting(
-                                name = settings.deviceName,
-                                onNameChange = { viewModel.setDeviceName(it) },
-                                onRandomize = { viewModel.randomizeDeviceName() }
-                            )
-                            Spacer(modifier = Modifier.height(20.dp))
-                            MaxConnectionsSetting(
-                                maxConnections = settings.maxConnections,
-                                onMaxChange = { viewModel.setMaxConnections(it) }
-                            )
-                            Spacer(modifier = Modifier.height(20.dp))
-                            NearbyDiscoverySetting(
-                                enabled = settings.enableNearbyDiscovery,
-                                onToggle = { viewModel.setEnableNearbyDiscovery(it) }
-                            )
-                        }
-                    }
+            }
+        } else {
+            // Other colors tab — neutral + presets
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                // Neutral option
+                item {
+                    val isSelected = currentSeed == "neutral"
+                    SeedColorCircle(
+                        seedArgb = 0xFF247EE0.toInt(),
+                        label = "Neutral",
+                        isSelected = isSelected,
+                        onClick = { viewModel.setThemeColorSeed("neutral") }
+                    )
                 }
-            } // End of Sub-screen Column
+                // Preset seeds
+                items(presetSeeds.size) { index ->
+                    val (name, argb) = presetSeeds[index]
+                    val hex = String.format("%08X", argb)
+                    val isSelected = currentSeed == hex
+                    SeedColorCircle(
+                        seedArgb = argb,
+                        label = name,
+                        isSelected = isSelected,
+                        onClick = { viewModel.setThemeColorSeed(hex) }
+                    )
+                }
+            }
         }
-    } // End of AnimatedContent
-    } // End of Main Scrollable Column
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // Pill tabs
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh
+        ) {
+            Row(
+                modifier = Modifier.padding(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                PillTab(selected = selectedTab == 0, text = "Wallpaper colors", modifier = Modifier.weight(1f)) { selectedTab = 0 }
+                PillTab(selected = selectedTab == 1, text = "Other colors", modifier = Modifier.weight(1f)) { selectedTab = 1 }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(28.dp))
+
+        // ─── Theme Toggle Cards ──────────────────────────────
+        ThemeToggleCard(
+            title = "Follow System Theme",
+            description = "When enabled, the app follows your device's light/dark mode setting automatically. Disable to manually choose light or dark mode below.",
+            checked = settings.themeMode == ThemeMode.SYSTEM,
+            onCheckedChange = { viewModel.setThemeMode(if (it) ThemeMode.SYSTEM else ThemeMode.LIGHT) }
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        ThemeToggleCard(
+            title = "Use Dark Mode",
+            description = "Forces the app to use dark mode regardless of your system setting. Only available when \"Follow System Theme\" is disabled.",
+            checked = settings.themeMode == ThemeMode.DARK,
+            enabled = settings.themeMode != ThemeMode.SYSTEM,
+            onCheckedChange = { viewModel.setThemeMode(if (it) ThemeMode.DARK else ThemeMode.LIGHT) }
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        ThemeToggleCard(
+            title = "Use Amoled Mode",
+            description = "Pure black background for AMOLED screens. Saves battery and reduces eye strain in dark environments.",
+            checked = settings.amoledMode,
+            onCheckedChange = { viewModel.setAmoledMode(it) }
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        ThemeToggleCard(
+            title = "Haptic Feedback",
+            description = "Vibrate on button taps for tactile feedback. Disable if you prefer silent interactions.",
+            checked = settings.hapticEnabled,
+            onCheckedChange = { viewModel.setHapticEnabled(it) }
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+@Composable
+private fun SeedColorCircle(
+    seedArgb: Int?,
+    label: String,
+    isSelected: Boolean,
+    scheme: androidx.compose.material3.ColorScheme? = null,
+    onClick: () -> Unit
+) {
+    val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+
+    // Generate color scheme from seed
+    val generatedScheme = remember(seedArgb, isDark) {
+        when {
+            scheme != null -> scheme
+            seedArgb != null -> colorSchemeFromSeed(seedArgb, isDark)
+            else -> neutralColorScheme(isDark)
+        }
+    }
+
+    val borderWidth by animateDpAsState(
+        targetValue = if (isSelected) 3.dp else 0.dp,
+        label = "borderWidth"
+    )
+    val borderColor by animateColorAsState(
+        targetValue = if (isSelected) generatedScheme.primary else Color.Transparent,
+        label = "borderColor"
+    )
+
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            modifier = Modifier
+                .size(56.dp)
+                .clip(CircleShape)
+                .border(borderWidth, borderColor, CircleShape)
+                .then(if (borderWidth > 0.dp) Modifier.padding(borderWidth) else Modifier)
+                .clickable(onClick = onClick)
+        ) {
+            // 4-quadrant color grid
+            Column(modifier = Modifier.matchParentSize()) {
+                Row(modifier = Modifier.weight(1f)) {
+                    Box(modifier = Modifier.weight(1f).fillMaxHeight().background(generatedScheme.primary))
+                    Box(modifier = Modifier.weight(1f).fillMaxHeight().background(generatedScheme.secondary))
+                }
+                Row(modifier = Modifier.weight(1f)) {
+                    Box(modifier = Modifier.weight(1f).fillMaxHeight().background(generatedScheme.tertiary))
+                    Box(modifier = Modifier.weight(1f).fillMaxHeight().background(generatedScheme.primaryContainer))
+                }
+            }
+            if (isSelected) {
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .background(Color.Black.copy(alpha = 0.3f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Check,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+private fun PillTab(selected: Boolean, text: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    val backgroundColor by animateColorAsState(
+        targetValue = if (selected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent,
+        label = "pillTabBg"
+    )
+    val textColor by animateColorAsState(
+        targetValue = if (selected) MaterialTheme.colorScheme.onSecondaryContainer
+            else MaterialTheme.colorScheme.onSurfaceVariant,
+        label = "pillTabText"
+    )
+    Surface(
+        modifier = modifier
+            .clip(CircleShape)
+            .clickable(onClick = onClick),
+        shape = CircleShape,
+        color = backgroundColor
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+            style = MaterialTheme.typography.labelLarge,
+            textAlign = TextAlign.Center,
+            color = textColor
+        )
+    }
+}
+
+@Composable
+private fun ThemeToggleCard(
+    title: String,
+    description: String,
+    checked: Boolean,
+    enabled: Boolean = true,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surfaceContainer
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (enabled) MaterialTheme.colorScheme.onSurface
+                           else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant
+                           else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                    lineHeight = MaterialTheme.typography.bodyMedium.lineHeight
+                )
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Switch(
+                checked = checked,
+                onCheckedChange = if (enabled) onCheckedChange else null,
+                enabled = enabled,
+                colors = SwitchDefaults.colors(
+                    checkedTrackColor = MaterialTheme.colorScheme.primary,
+                    checkedThumbColor = MaterialTheme.colorScheme.onPrimary
+                )
+            )
+        }
+    }
+}
+
+// ─── Security Content ────────────────────────────────────────────
+
+@Composable
+private fun SecurityContent(settings: com.localshare.app.data.AppSettings, viewModel: FileShareViewModel, paddingValues: PaddingValues) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(paddingValues)
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp, vertical = 16.dp)
+    ) {
+        SettingsCard {
+            PinSetting(
+                currentPin = settings.pin,
+                onPinChange = { viewModel.setPin(it) }
+            )
+            Spacer(modifier = Modifier.height(20.dp))
+            EncryptionSetting(
+                enabled = settings.encryptionEnabled,
+                onToggle = { viewModel.setEncryptionEnabled(it) }
+            )
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+// ─── Device Content ──────────────────────────────────────────────
+
+@Composable
+private fun DeviceContent(settings: com.localshare.app.data.AppSettings, viewModel: FileShareViewModel, paddingValues: PaddingValues) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(paddingValues)
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp, vertical = 16.dp)
+    ) {
+        SettingsCard {
+            DeviceNameSetting(
+                name = settings.deviceName,
+                onNameChange = { viewModel.setDeviceName(it) },
+                onRandomize = { viewModel.randomizeDeviceName() }
+            )
+            Spacer(modifier = Modifier.height(20.dp))
+            MaxConnectionsSetting(
+                maxConnections = settings.maxConnections,
+                onMaxChange = { viewModel.setMaxConnections(it) }
+            )
+            Spacer(modifier = Modifier.height(20.dp))
+            NearbyDiscoverySetting(
+                enabled = settings.enableNearbyDiscovery,
+                onToggle = { viewModel.setEnableNearbyDiscovery(it) }
+            )
+            Spacer(modifier = Modifier.height(20.dp))
+            BatteryOptimizationSetting()
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -448,19 +804,23 @@ private fun shapeForIndex(index: Int, total: Int): RoundedCornerShape {
 private fun getCategoryColors(isDark: Boolean): List<Pair<Color, Color>> {
     return if (isDark) {
         listOf(
-            Color(0xFF7D5260) to Color(0xFFFFD8E4), // Appearance — Pink
-            Color(0xFF633B48) to Color(0xFFFFD8EC), // Security — Rose
-            Color(0xFF004A77) to Color(0xFFC2E7FF), // Device — Blue
-            Color(0xFF3F474D) to Color(0xFFDEE3EB), // About — Grey
-            Color(0xFF386A20) to Color(0xFFB7F397)  // How to Use — Green
+            Color(0xFF7D5260) to Color(0xFFFFD8E4),
+            Color(0xFF633B48) to Color(0xFFFFD8EC),
+            Color(0xFF004A77) to Color(0xFFC2E7FF),
+            Color(0xFF3F474D) to Color(0xFFDEE3EB),
+            Color(0xFF4B3900) to Color(0xFFFFE082), // Updates
+            Color(0xFF3F474D) to Color(0xFFDEE3EB),
+            Color(0xFF386A20) to Color(0xFFB7F397)
         )
     } else {
         listOf(
-            Color(0xFFFFD8E4) to Color(0xFF631835), // Appearance — Pink
-            Color(0xFFFFD8EC) to Color(0xFF631B4B), // Security — Rose
-            Color(0xFFD7E3FF) to Color(0xFF005AC1), // Device — Blue
-            Color(0xFFEFF1F7) to Color(0xFF44474F), // About — Grey
-            Color(0xFFB7F397) to Color(0xFF042100)  // How to Use — Green
+            Color(0xFFFFD8E4) to Color(0xFF631835),
+            Color(0xFFFFD8EC) to Color(0xFF631B4B),
+            Color(0xFFD7E3FF) to Color(0xFF005AC1),
+            Color(0xFFEFF1F7) to Color(0xFF44474F),
+            Color(0xFFFFE082) to Color(0xFF4B3900), // Updates
+            Color(0xFFEFF1F7) to Color(0xFF44474F),
+            Color(0xFFB7F397) to Color(0xFF042100)
         )
     }
 }
@@ -470,8 +830,7 @@ private fun SettingsCard(content: @Composable () -> Unit) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = MaterialTheme.colorScheme.surfaceContainer,
-        shape = RoundedCornerShape(24.dp),
-        tonalElevation = 1.dp
+        shape = RoundedCornerShape(24.dp)
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             content()
@@ -591,7 +950,7 @@ private fun ColorSetting(selected: ColorPalette, onSelect: (ColorPalette) -> Uni
                             .clip(CircleShape)
                             .background(
                                 if (palette == ColorPalette.SYSTEM) {
-                                    Brush.sweepGradient(
+                                    androidx.compose.ui.graphics.Brush.sweepGradient(
                                         listOf(
                                             Color(0xFF4285F4),
                                             Color(0xFFEA4335),
@@ -601,7 +960,7 @@ private fun ColorSetting(selected: ColorPalette, onSelect: (ColorPalette) -> Uni
                                         )
                                     )
                                 } else {
-                                    Brush.linearGradient(
+                                    androidx.compose.ui.graphics.Brush.linearGradient(
                                         listOf(
                                             Color(palette.previewColor),
                                             Color(palette.previewColor).copy(alpha = 0.7f)
@@ -634,9 +993,6 @@ private fun ColorSetting(selected: ColorPalette, onSelect: (ColorPalette) -> Uni
         }
     }
 }
-
-
-// ─── PIN Setting ───────────────────────────────────────────────────
 
 @Composable
 private fun PinSetting(currentPin: String?, onPinChange: (String?) -> Unit) {
@@ -698,10 +1054,7 @@ private fun PinInputDialog(onConfirm: (String) -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text(
-                "Set 4-Digit PIN",
-                fontWeight = FontWeight.Bold
-            )
+            Text("Set 4-Digit PIN", fontWeight = FontWeight.Bold)
         },
         text = {
             Column {
@@ -735,9 +1088,7 @@ private fun PinInputDialog(onConfirm: (String) -> Unit, onDismiss: () -> Unit) {
                     },
                     isError = error,
                     supportingText = {
-                        if (error) {
-                            Text("Enter exactly 4 digits")
-                        }
+                        if (error) Text("Enter exactly 4 digits")
                     },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = MaterialTheme.colorScheme.primary,
@@ -750,24 +1101,16 @@ private fun PinInputDialog(onConfirm: (String) -> Unit, onDismiss: () -> Unit) {
         },
         confirmButton = {
             TextButton(onClick = {
-                if (pin.length == 4) {
-                    onConfirm(pin)
-                } else {
-                    error = true
-                }
+                if (pin.length == 4) onConfirm(pin) else error = true
             }) {
                 Text("Set PIN", fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
+            TextButton(onClick = onDismiss) { Text("Cancel") }
         }
     )
 }
-
-// ─── Device Name Setting ───────────────────────────────────────────
 
 @Composable
 private fun DeviceNameSetting(
@@ -818,15 +1161,12 @@ private fun DeviceNameSetting(
     }
 
     Spacer(modifier = Modifier.height(4.dp))
-
     Text(
         text = "Shown to connected devices",
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant
     )
 }
-
-// ─── Max Connections Setting ───────────────────────────────────────
 
 @Composable
 private fun MaxConnectionsSetting(maxConnections: Int, onMaxChange: (Int) -> Unit) {
@@ -849,7 +1189,6 @@ private fun MaxConnectionsSetting(maxConnections: Int, onMaxChange: (Int) -> Uni
             )
         }
 
-        // Current value badge
         Box(
             modifier = Modifier
                 .clip(RoundedCornerShape(12.dp))
@@ -911,5 +1250,371 @@ fun NearbyDiscoverySetting(enabled: Boolean, onToggle: (Boolean) -> Unit) {
                 uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
             )
         )
+    }
+}
+
+@Composable
+fun EncryptionSetting(enabled: Boolean, onToggle: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "E2E Encryption",
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = if (enabled) "Files are encrypted with AES-256-GCM" else "Encrypt file transfers with AES-256",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Spacer(modifier = Modifier.width(16.dp))
+        Switch(
+            checked = enabled,
+            onCheckedChange = onToggle,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = MaterialTheme.colorScheme.primary,
+                checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
+                uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
+            )
+        )
+    }
+}
+
+@android.annotation.SuppressLint("BatteryLife")
+@Composable
+private fun BatteryOptimizationSetting() {
+    val context = LocalContext.current
+    val pm = remember { context.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager }
+    var isIgnored by remember { mutableStateOf(pm.isIgnoringBatteryOptimizations(context.packageName)) }
+
+    val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                isIgnored = pm.isIgnoringBatteryOptimizations(context.packageName)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "Battery Optimization",
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = if (isIgnored) "Unrestricted background server" else "Disable for reliable background server",
+                style = MaterialTheme.typography.bodySmall,
+                color = if (isIgnored) Color(0xFF10B981) else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Spacer(modifier = Modifier.width(16.dp))
+
+        if (isIgnored) {
+            Icon(
+                imageVector = Icons.Rounded.CheckCircle,
+                contentDescription = "Optimizations Ignored",
+                tint = Color(0xFF10B981),
+                modifier = Modifier.size(28.dp)
+            )
+        } else {
+            FilledTonalButton(
+                onClick = {
+                    try {
+                        val intent = android.content.Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+                        intent.data = android.net.Uri.parse("package:${context.packageName}")
+                        context.startActivity(intent)
+                    } catch (e: Exception) {
+                        Toast.makeText(context, "Unable to open battery settings", Toast.LENGTH_SHORT).show()
+                    }
+                },
+                shape = RoundedCornerShape(12.dp),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp)
+            ) {
+                Text("Disable", style = MaterialTheme.typography.labelMedium)
+        }
+    }
+}
+}
+
+// ─── Storage Content ───────────────────────────────────────────────
+
+@Composable
+fun StorageContent(paddingValues: PaddingValues) {
+    var totalSize by remember { mutableStateOf(0L) }
+    var imageCount by remember { mutableIntStateOf(0) }
+    var videoCount by remember { mutableIntStateOf(0) }
+    var otherCount by remember { mutableIntStateOf(0) }
+    var isLoading by remember { mutableStateOf(true) }
+
+    LaunchedEffect(Unit) {
+        withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val downloadsDir = android.os.Environment.getExternalStoragePublicDirectory(
+                android.os.Environment.DIRECTORY_DOWNLOADS
+            )
+            val localShareDir = java.io.File(downloadsDir, "LocalShare")
+            
+            var size = 0L
+            var images = 0
+            var videos = 0
+            var others = 0
+
+            if (localShareDir.exists()) {
+                localShareDir.walkTopDown().filter { it.isFile }.forEach { file ->
+                    size += file.length()
+                    val ext = file.extension.lowercase()
+                    when (ext) {
+                        "jpg", "jpeg", "png", "gif", "webp", "bmp", "heic" -> images++
+                        "mp4", "mkv", "avi", "mov", "webm" -> videos++
+                        else -> others++
+                    }
+                }
+            }
+            
+            totalSize = size
+            imageCount = images
+            videoCount = videos
+            otherCount = others
+            isLoading = false
+        }
+    }
+
+    fun formatSize(bytes: Long): String = when {
+        bytes >= 1_073_741_824 -> String.format("%.1f GB", bytes / 1_073_741_824.0)
+        bytes >= 1_048_576 -> String.format("%.1f MB", bytes / 1_048_576.0)
+        bytes >= 1024 -> String.format("%.1f KB", bytes / 1024.0)
+        else -> "$bytes B"
+    }
+
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(paddingValues)
+            .padding(horizontal = 16.dp),
+        contentPadding = PaddingValues(top = 16.dp, bottom = 32.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        item {
+            SettingsCard {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp)
+                ) {
+                    Text(
+                        text = "Total Space Used",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    if (isLoading) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                    } else {
+                        Text(
+                            text = formatSize(totalSize),
+                            style = MaterialTheme.typography.displaySmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(24.dp))
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        StorageStatItem(
+                            icon = Icons.Rounded.Image,
+                            label = "Images",
+                            count = imageCount,
+                            color = Color(0xFF4CAF50)
+                        )
+                        StorageStatItem(
+                            icon = Icons.Rounded.Videocam,
+                            label = "Videos",
+                            count = videoCount,
+                            color = Color(0xFFE91E63)
+                        )
+                        StorageStatItem(
+                            icon = Icons.AutoMirrored.Rounded.InsertDriveFile,
+                            label = "Other Files",
+                            count = otherCount,
+                            color = Color(0xFF9E9E9E)
+                        )
+                    }
+                }
+            }
+        }
+        
+
+    }
+}
+
+@Composable
+private fun StorageStatItem(icon: ImageVector, label: String, count: Int, color: Color) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Surface(
+            shape = CircleShape,
+            color = color.copy(alpha = 0.1f),
+            modifier = Modifier.size(48.dp)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = color,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = count.toString(),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+fun UpdatesContent(
+    viewModel: FileShareViewModel,
+    updateInfo: com.localshare.app.util.UpdateInfo?,
+    paddingValues: PaddingValues
+) {
+    val context = LocalContext.current
+    var isChecking by remember { mutableStateOf(false) }
+
+    val currentVersion = remember {
+        try {
+            val pInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+            pInfo.versionName ?: "1.0"
+        } catch (e: Exception) {
+            "1.0"
+        }
+    }
+
+    LaunchedEffect(updateInfo) {
+        if (updateInfo != null) {
+            isChecking = false
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(paddingValues)
+            .padding(horizontal = 24.dp)
+            .verticalScroll(rememberScrollState()),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(modifier = Modifier.height(24.dp))
+        Icon(
+            imageVector = Icons.Rounded.SystemUpdate,
+            contentDescription = null,
+            modifier = Modifier.size(64.dp),
+            tint = MaterialTheme.colorScheme.primary
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = "LocalShare",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            text = "Current Version: $currentVersion",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(32.dp))
+
+        if (updateInfo != null) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("New Version Available: ${updateInfo.version}", fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = updateInfo.description,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(
+                        onClick = {
+                            if (updateInfo.apkUrl != null) {
+                                com.localshare.app.util.UpdateManager.downloadAndInstallUpdate(context, updateInfo.apkUrl)
+                            } else {
+                                val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(updateInfo.releaseUrl))
+                                context.startActivity(intent)
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Download & Install Update")
+                    }
+                }
+            }
+        } else {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text("You are on the latest version!", fontWeight = FontWeight.SemiBold)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(
+                        onClick = {
+                            isChecking = true
+                            viewModel.checkForUpdates(currentVersion)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !isChecking
+                    ) {
+                        if (isChecking) {
+                            androidx.compose.material3.CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                strokeWidth = 2.dp
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Checking...")
+                        } else {
+                            Text("Check for Updates")
+                        }
+                    }
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(24.dp))
     }
 }

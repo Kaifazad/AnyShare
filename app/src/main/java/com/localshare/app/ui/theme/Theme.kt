@@ -1,9 +1,11 @@
 package com.localshare.app.ui.theme
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
@@ -13,6 +15,8 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.material3.Typography
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
@@ -24,7 +28,6 @@ import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.googlefonts.Font
 import androidx.compose.ui.text.googlefonts.GoogleFont
-import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
@@ -340,7 +343,16 @@ private val RoseLightScheme = lightColorScheme(
     outlineVariant = Color(0xFFE2B8CC)
 )
 
-// ─── Palette Selection Helper ─────────────────────────────────────
+// ─── Resolve final dark/light boolean ────────────────────────────────────────
+@Composable
+fun isDarkTheme(): Boolean {
+    val isSystemDark = isSystemInDarkTheme()
+    val forceTheme = false
+    val isDarkMode = false
+    return rememberSaveable(isSystemDark, forceTheme, isDarkMode) {
+        if (forceTheme) isDarkMode else isSystemDark
+    }
+}
 
 /**
  * Returns the appropriate dark/light ColorScheme for a given [ColorPalette].
@@ -354,6 +366,149 @@ fun getColorScheme(palette: ColorPalette, darkTheme: Boolean): androidx.compose.
         ColorPalette.SUNSET -> if (darkTheme) SunsetDarkScheme else SunsetLightScheme
         ColorPalette.ROSE -> if (darkTheme) RoseDarkScheme else RoseLightScheme
     }
+}
+
+// ─── Seed-based Color Generation ──────────────────────────────────
+
+private fun ColorScheme.maybeAmoled(isAmoled: Boolean) = if (isAmoled) {
+    copy(
+        background = Color.Black,
+        surface = Color.Black,
+        surfaceContainer = Color(0xFF141414),
+        surfaceContainerLow = Color(0xFF0C0C0C),
+        surfaceContainerHigh = Color(0xFF1E1E1E),
+        surfaceContainerHighest = Color(0xFF2C2C2C),
+        surfaceContainerLowest = Color(0xFF050505),
+        surfaceBright = Color(0xFF1A1A1A),
+        surfaceDim = Color.Black,
+        inverseSurface = Color.White,
+        inverseOnSurface = Color.Black,
+    )
+} else this
+
+@SuppressLint("RestrictedApi")
+fun colorSchemeFromSeed(seedArgb: Int, isDark: Boolean, isAmoledMode: Boolean = false): androidx.compose.material3.ColorScheme {
+    val hct = com.google.android.material.color.utilities.Hct.fromInt(seedArgb)
+    val scheme = com.google.android.material.color.utilities.SchemeTonalSpot(hct, isDark, 0.0)
+    return buildColorScheme(
+        p = scheme.primaryPalette,
+        s = scheme.secondaryPalette,
+        t = scheme.tertiaryPalette,
+        n = scheme.neutralPalette,
+        nv = scheme.neutralVariantPalette,
+        e = scheme.errorPalette,
+        isDark = isDark,
+        isAmoledMode = isAmoledMode
+    )
+}
+
+@SuppressLint("RestrictedApi")
+fun neutralColorScheme(isDark: Boolean, isAmoledMode: Boolean = false): androidx.compose.material3.ColorScheme {
+    val hct = com.google.android.material.color.utilities.Hct.fromInt(0xFF247EE0.toInt())
+    val scheme = com.google.android.material.color.utilities.SchemeTonalSpot(hct, isDark, 0.0)
+    val neutralPalette = com.google.android.material.color.utilities.TonalPalette.fromHueAndChroma(0.0, 0.0)
+    return buildColorScheme(
+        p = scheme.primaryPalette,
+        s = scheme.secondaryPalette,
+        t = scheme.tertiaryPalette,
+        n = neutralPalette,
+        nv = neutralPalette,
+        e = scheme.errorPalette,
+        isDark = isDark,
+        isAmoledMode = isAmoledMode
+    )
+}
+
+@SuppressLint("RestrictedApi")
+private fun buildColorScheme(
+    p: com.google.android.material.color.utilities.TonalPalette,
+    s: com.google.android.material.color.utilities.TonalPalette,
+    t: com.google.android.material.color.utilities.TonalPalette,
+    n: com.google.android.material.color.utilities.TonalPalette,
+    nv: com.google.android.material.color.utilities.TonalPalette,
+    e: com.google.android.material.color.utilities.TonalPalette,
+    isDark: Boolean,
+    isAmoledMode: Boolean
+): androidx.compose.material3.ColorScheme {
+    return if (isDark) {
+        darkColorScheme(
+            primary = Color(p.tone(80)),
+            onPrimary = Color(p.tone(20)),
+            primaryContainer = Color(p.tone(30)),
+            onPrimaryContainer = Color(p.tone(90)),
+            inversePrimary = Color(p.tone(40)),
+            secondary = Color(s.tone(80)),
+            onSecondary = Color(s.tone(20)),
+            secondaryContainer = Color(s.tone(30)),
+            onSecondaryContainer = Color(s.tone(90)),
+            tertiary = Color(t.tone(80)),
+            onTertiary = Color(t.tone(20)),
+            tertiaryContainer = Color(t.tone(30)),
+            onTertiaryContainer = Color(t.tone(90)),
+            background = Color(n.tone(6)),
+            onBackground = Color(n.tone(90)),
+            surface = Color(n.tone(6)),
+            onSurface = Color(n.tone(90)),
+            surfaceVariant = Color(nv.tone(30)),
+            onSurfaceVariant = Color(nv.tone(80)),
+            surfaceTint = Color(p.tone(80)),
+            inverseSurface = Color(n.tone(90)),
+            inverseOnSurface = Color(n.tone(20)),
+            error = Color(e.tone(80)),
+            onError = Color(e.tone(20)),
+            errorContainer = Color(e.tone(30)),
+            onErrorContainer = Color(e.tone(90)),
+            outline = Color(nv.tone(60)),
+            outlineVariant = Color(nv.tone(30)),
+            scrim = Color(n.tone(0)),
+            surfaceBright = Color(n.tone(24)),
+            surfaceDim = Color(n.tone(6)),
+            surfaceContainer = Color(n.tone(12)),
+            surfaceContainerHigh = Color(n.tone(17)),
+            surfaceContainerHighest = Color(n.tone(22)),
+            surfaceContainerLow = Color(n.tone(10)),
+            surfaceContainerLowest = Color(n.tone(4)),
+        )
+    } else {
+        lightColorScheme(
+            primary = Color(p.tone(40)),
+            onPrimary = Color(p.tone(100)),
+            primaryContainer = Color(p.tone(90)),
+            onPrimaryContainer = Color(p.tone(10)),
+            inversePrimary = Color(p.tone(80)),
+            secondary = Color(s.tone(40)),
+            onSecondary = Color(s.tone(100)),
+            secondaryContainer = Color(s.tone(90)),
+            onSecondaryContainer = Color(s.tone(10)),
+            tertiary = Color(t.tone(40)),
+            onTertiary = Color(t.tone(100)),
+            tertiaryContainer = Color(t.tone(90)),
+            onTertiaryContainer = Color(t.tone(10)),
+            background = Color(n.tone(99)),
+            onBackground = Color(n.tone(10)),
+            surface = Color(n.tone(99)),
+            onSurface = Color(n.tone(10)),
+            surfaceVariant = Color(nv.tone(90)),
+            onSurfaceVariant = Color(nv.tone(30)),
+            surfaceTint = Color(p.tone(40)),
+            inverseSurface = Color(n.tone(20)),
+            inverseOnSurface = Color(n.tone(95)),
+            error = Color(e.tone(40)),
+            onError = Color(e.tone(100)),
+            errorContainer = Color(e.tone(90)),
+            onErrorContainer = Color(e.tone(10)),
+            outline = Color(nv.tone(50)),
+            outlineVariant = Color(nv.tone(80)),
+            scrim = Color(n.tone(0)),
+            surfaceBright = Color(n.tone(98)),
+            surfaceDim = Color(n.tone(87)),
+            surfaceContainer = Color(n.tone(94)),
+            surfaceContainerHigh = Color(n.tone(92)),
+            surfaceContainerHighest = Color(n.tone(90)),
+            surfaceContainerLow = Color(n.tone(96)),
+            surfaceContainerLowest = Color(n.tone(100)),
+        )
+    }.maybeAmoled(isAmoledMode && isDark)
 }
 
 // ─── Typography (Outfit — Rounded, Modern) ────────────────────────
@@ -482,17 +637,36 @@ val LocalShareShapes = Shapes(
 fun LocalShareTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     colorPalette: ColorPalette = ColorPalette.SYSTEM,
+    amoledMode: Boolean = false,
+    themeColorSeed: String = "system",
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        colorPalette == ColorPalette.SYSTEM && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+    val context = LocalContext.current
+
+    val colorScheme = remember(darkTheme, colorPalette, amoledMode, themeColorSeed) {
+        when {
+            // User selected a preset seed color
+            themeColorSeed != "system" && themeColorSeed != "neutral" -> {
+                val seedArgb = themeColorSeed.toLongOrNull(16)?.toInt()
+                if (seedArgb != null) colorSchemeFromSeed(seedArgb, darkTheme, amoledMode)
+                else if (darkTheme) LocalShareDarkScheme.maybeAmoled(amoledMode) else LocalShareLightScheme
+            }
+            // User selected neutral/greyscale
+            themeColorSeed == "neutral" -> neutralColorScheme(darkTheme, amoledMode)
+            // System dynamic colors (Android 12+)
+            colorPalette == ColorPalette.SYSTEM && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+                if (darkTheme) dynamicDarkColorScheme(context).maybeAmoled(amoledMode)
+                else dynamicLightColorScheme(context)
+            }
+            // Static palette fallback
+            else -> {
+                val scheme = getColorScheme(
+                    if (colorPalette == ColorPalette.SYSTEM) ColorPalette.LOCALSHARE else colorPalette,
+                    darkTheme
+                ) ?: (if (darkTheme) LocalShareDarkScheme else LocalShareLightScheme)
+                if (darkTheme && amoledMode) scheme.maybeAmoled(true) else scheme
+            }
         }
-        else -> getColorScheme(
-            if (colorPalette == ColorPalette.SYSTEM) ColorPalette.LOCALSHARE else colorPalette,
-            darkTheme
-        ) ?: (if (darkTheme) LocalShareDarkScheme else LocalShareLightScheme)
     }
 
     val view = LocalView.current
@@ -500,7 +674,8 @@ fun LocalShareTheme(
         SideEffect {
             val window = (view.context as Activity).window
             window.statusBarColor = Color.Transparent.toArgb()
-            window.navigationBarColor = Color.Transparent.toArgb()
+            window.navigationBarColor = if (darkTheme && amoledMode) Color.Black.toArgb()
+                                        else Color.Transparent.toArgb()
             WindowCompat.getInsetsController(window, view).apply {
                 isAppearanceLightStatusBars = !darkTheme
                 isAppearanceLightNavigationBars = !darkTheme

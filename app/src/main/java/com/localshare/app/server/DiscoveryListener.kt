@@ -124,7 +124,14 @@ class DiscoveryListener(private val context: Context) {
             } finally {
                 try {
                     val groupAddress = InetAddress.getByName(DiscoveryBroadcaster.MULTICAST_GROUP)
-                    socket?.leaveGroup(groupAddress)
+                    val networkInterface = com.localshare.app.util.NetworkUtils.getWifiNetworkInterface(context)
+                    if (networkInterface != null) {
+                        @Suppress("DEPRECATION")
+                        socket?.leaveGroup(java.net.InetSocketAddress(groupAddress, DiscoveryBroadcaster.MULTICAST_PORT), networkInterface)
+                    } else {
+                        @Suppress("DEPRECATION")
+                        socket?.leaveGroup(groupAddress)
+                    }
                 } catch (e: Exception) {}
                 socket?.close()
                 if (multicastLock.isHeld) {

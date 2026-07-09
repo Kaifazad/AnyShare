@@ -9,6 +9,7 @@ import com.localshare.app.data.FileRepository
 import com.localshare.app.data.ShareConfig
 import com.localshare.app.data.SharedFile
 import com.localshare.app.data.FileCategory
+import com.localshare.app.service.ServerForegroundService
 import fi.iki.elonen.NanoHTTPD
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -71,6 +72,14 @@ class FileShareServer(
     // Authenticated IPs (have entered the correct PIN)
     private val authenticatedIps = ConcurrentHashMap<String, Long>()
 
+    // ─── Brute-force protection ─────────────────────────────────
+    private data class AuthAttemptInfo(var attempts: Int = 0, var lockedUntil: Long = 0L)
+    private val authAttempts = ConcurrentHashMap<String, AuthAttemptInfo>()
+    private object BruteForceConfig {
+        const val MAX_ATTEMPTS = 3
+        const val LOCKOUT_MS = 30_000L
+    }
+
     @Volatile
     var shareConfig: ShareConfig = ShareConfig()
 
@@ -84,12 +93,112 @@ class FileShareServer(
     @Volatile
     var maxConnections: Int = 3
 
+    // ─── Encryption ──────────────────────────────────────────────
+    @Volatile
+    var encryptionEnabled: Boolean = false
+
+    @Volatile
+    private var encryptionKey: ByteArray? = null
+
+    /**
+     * Check if an encryption key has been generated.
+     */
+    fun hasEncryptionKey(): Boolean = encryptionKey != null
+
+    /**
+     * Generate a new random encryption key. Called when encryption is enabled.
+     */
+    fun generateEncryptionKey() {
+        encryptionKey = FileEncryption.generateKey()
+    }
+
+    /**
+     * Get the base64url-encoded encryption key for embedding in URLs.
+     * Returns null if encryption is disabled.
+     */
+    fun getEncryptionKeyBase64(): String? {
+        val key = encryptionKey ?: return null
+        return FileEncryption.encodeKey(key)
+    }
+
+    /**
+     * Set the encryption key from a base64url-encoded string (for client-side use).
+     */
+    fun setEncryptionKey(encodedKey: String) {
+        encryptionKey = FileEncryption.decodeKey(encodedKey)
+    }
+
     // ─── Clipboard Sync ────────────────────────────────────────
     @Volatile
     private var systemClipboard: String = ""
     private var sharedText: String = ""
     @Suppress("unused")
     private var phoneClipboardVersion: Long = 0
+
+    // ─── Transfer Sessions (phone-to-phone push) ──────────────
+    val activeSessions = ConcurrentHashMap<String, com.localshare.app.data.TransferSession>()
+
+    /**
+     * Callback for when a new transfer session is created.
+     * Set by the ViewModel/Service to show accept/reject UI.
+     */
+    var onIncomingTransfer: ((com.localshare.app.data.TransferSession) -> Unit)? = null
+
+    /**
+     * Get the list of pending incoming sessions.
+     */
+    fun getPendingSessions(): List<com.localshare.app.data.TransferSession> {
+        return activeSessions.values.filter { it.status == com.localshare.app.data.SessionStatus.PENDING }
+    }
+
+    /**
+     * Accept a pending transfer session.
+     */
+    fun acceptSession(sessionId: String): Boolean {
+        val session = activeSessions[sessionId] ?: return false
+        activeSessions[sessionId] = session.copy(status = com.localshare.app.data.SessionStatus.ACTIVE)
+        return true
+    }
+
+    /**
+     * Reject a pending transfer session.
+     */
+    fun rejectSession(sessionId: String): Boolean {
+        val session = activeSessions[sessionId] ?: return false
+        activeSessions[sessionId] = session.copy(status = com.localshare.app.data.SessionStatus.REJECTED)
+        return true
+    }
+
+    /**
+     * Cancel an active transfer session.
+     */
+    fun cancelSession(sessionId: String): Boolean {
+        val session = activeSessions[sessionId] ?: return false
+        activeSessions[sessionId] = session.copy(status = com.localshare.app.data.SessionStatus.CANCELLED)
+        return true
+    }
+
+    /**
+     * Mark a session as completed.
+     */
+    fun completeSession(sessionId: String) {
+        val session = activeSessions[sessionId] ?: return
+        activeSessions[sessionId] = session.copy(status = com.localshare.app.data.SessionStatus.COMPLETED)
+    }
+
+    /**
+     * Clean up old sessions (older than 5 minutes).
+     */
+    private fun cleanupSessions() {
+        activeSessions.entries.removeIf { (_, session) ->
+            session.status in listOf(
+                com.localshare.app.data.SessionStatus.COMPLETED,
+                com.localshare.app.data.SessionStatus.REJECTED,
+                com.localshare.app.data.SessionStatus.CANCELLED,
+                com.localshare.app.data.SessionStatus.FAILED
+            )
+        }
+    }
 
     // ─── File list cache (avoids runBlocking deadlock under load) ────
     @Volatile
@@ -114,9 +223,30 @@ class FileShareServer(
         Log.d(TAG, "$method $uri from $ip")
 
         return try {
+            // ─── CORS preflight ────────────────────────────────
+            if (method == Method.OPTIONS) {
+                return newFixedLengthResponse(Response.Status.OK, MIME_PLAINTEXT, "").also {
+                    it.addHeader("Access-Control-Allow-Origin", "*")
+                    it.addHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+                    it.addHeader("Access-Control-Allow-Headers", "Content-Type, Range")
+                    it.addHeader("Access-Control-Max-Age", "86400")
+                }
+            }
+
             // ─── Auth endpoint is always accessible ─────────────
             if (uri == "/api/auth" && method == Method.POST) {
                 return handleAuth(session, ip)
+            }
+
+            // ─── Push transfer endpoints are always accessible ──
+            if ((uri == "/api/prepare-upload" || uri == "/api/cancel" || uri == "/api/sessions") && method == Method.POST || uri == "/api/sessions" || uri == "/api/session/status") {
+                return when {
+                    uri == "/api/prepare-upload" && method == Method.POST -> handlePrepareUpload(session, ip)
+                    uri == "/api/cancel" && method == Method.POST -> handleCancelTransfer(session, ip)
+                    uri == "/api/session/status" && method == Method.GET -> handleSessionStatus(session)
+                    uri == "/api/sessions" -> serveSessions()
+                    else -> newFixedLengthResponse(Response.Status.NOT_FOUND, MIME_PLAINTEXT, "Not Found")
+                }
             }
 
             // ─── PIN gate ───────────────────────────────────────
@@ -145,6 +275,7 @@ class FileShareServer(
             when {
                 uri == "/" || uri == "/index.html" -> serveWebUI()
                 uri == "/api/files" -> serveFileList(session)
+                uri == "/api/files/clear" && method == Method.POST -> handleClearFiles()
                 uri == "/api/status" -> serveStatus()
                 uri == "/api/clipboard" && method == Method.GET -> serveClipboard()
                 uri == "/api/clipboard" && method == Method.POST -> handleSetClipboard(session)
@@ -154,6 +285,9 @@ class FileShareServer(
                 uri.startsWith("/api/icon/") -> serveAppIcon(session, uri)
                 uri == "/api/download-zip" -> serveZip(session, ip)
                 uri == "/api/upload" && method == Method.POST -> handleUpload(session, ip)
+                uri == "/api/prepare-upload" && method == Method.POST -> handlePrepareUpload(session, ip)
+                uri == "/api/cancel" && method == Method.POST -> handleCancelTransfer(session, ip)
+                uri == "/api/sessions" && method == Method.GET -> serveSessions()
                 uri == "/favicon.ico" -> serveFavicon()
                 uri == "/logo.png" -> serveLogo()
                 uri == "/logo-dark.png" -> serveLogoDark()
@@ -172,6 +306,25 @@ class FileShareServer(
     // ─── Auth Handler ───────────────────────────────────────────
 
     private fun handleAuth(session: IHTTPSession, ip: String): Response {
+        // Check brute-force lockout
+        val attemptInfo = authAttempts[ip]
+        if (attemptInfo != null) {
+            val now = System.currentTimeMillis()
+            if (attemptInfo.attempts >= BruteForceConfig.MAX_ATTEMPTS) {
+                if (now < attemptInfo.lockedUntil) {
+                    val retryAfter = ((attemptInfo.lockedUntil - now) / 1000).toInt() + 1
+                    return newFixedLengthResponse(
+                        Response.Status.TOO_MANY_REQUESTS,
+                        "application/json",
+                        """{"success":false,"error":"Too many attempts. Try again in $retryAfter seconds.","retryAfter":$retryAfter}"""
+                    )
+                } else {
+                    // Lockout expired, reset
+                    authAttempts.remove(ip)
+                }
+            }
+        }
+
         // Parse POST body
         val bodyMap = HashMap<String, String>()
         try {
@@ -189,18 +342,32 @@ class FileShareServer(
 
         val currentPin = pin
         return if (currentPin != null && submittedPin == currentPin) {
-            // Authenticate this IP
+            // Successful auth — clear attempts and authenticate IP
+            authAttempts.remove(ip)
             authenticatedIps[ip] = System.currentTimeMillis()
+            val json = JSONObject().apply {
+                put("success", true)
+                put("deviceName", deviceName)
+            }
             newFixedLengthResponse(
                 Response.Status.OK,
                 "application/json",
-                """{"success":true,"deviceName":"$deviceName"}"""
+                json.toString()
             )
         } else {
+            // Failed auth — track attempt
+            val info = authAttempts.getOrPut(ip) { AuthAttemptInfo() }
+            info.attempts++
+            if (info.attempts >= BruteForceConfig.MAX_ATTEMPTS) {
+                info.lockedUntil = System.currentTimeMillis() + BruteForceConfig.LOCKOUT_MS
+                Log.w(TAG, "IP $ip locked out after ${info.attempts} failed attempts")
+            }
+            val remaining = BruteForceConfig.MAX_ATTEMPTS - info.attempts
+            val msg = if (remaining > 0) "Incorrect PIN ($remaining attempts left)" else "Too many attempts. Locked for 30 seconds."
             newFixedLengthResponse(
                 Response.Status.UNAUTHORIZED,
                 "application/json",
-                """{"success":false,"error":"Incorrect PIN"}"""
+                """{"success":false,"error":"$msg"}"""
             )
         }
     }
@@ -317,71 +484,106 @@ class FileShareServer(
 
     private fun handleUpload(session: IHTTPSession, ip: String): Response {
         try {
-            // NanoHTTPD requires parsing the body to get temp files
-            val bodyMap = HashMap<String, String>()
-            session.parseBody(bodyMap)
-
+            val params = session.parameters
+            val sessionId = params["sessionId"]?.firstOrNull()
+            
             val downloadsDir = android.os.Environment.getExternalStoragePublicDirectory(
                 android.os.Environment.DIRECTORY_DOWNLOADS
             )
             val localShareDir = File(downloadsDir, "LocalShare")
             if (!localShareDir.exists()) localShareDir.mkdirs()
 
+            // ─── Phone-to-Phone Push Transfer ───
+            if (sessionId != null) {
+                val transferSession = activeSessions[sessionId]
+                if (transferSession == null) {
+                    return newFixedLengthResponse(Response.Status.BAD_REQUEST, "application/json", """{"error":"Invalid sessionId"}""")
+                }
+                if (transferSession.status != com.localshare.app.data.SessionStatus.ACTIVE) {
+                    return newFixedLengthResponse(Response.Status.FORBIDDEN, "application/json", """{"error":"Transfer not accepted yet or already finished"}""")
+                }
+
+                val filename = params["filename"]?.firstOrNull() ?: "upload_${System.currentTimeMillis()}"
+                
+                // Ensure unique filename
+                val destFile = getUniqueFile(localShareDir, filename)
+                
+                val contentLength = session.headers["content-length"]?.toLongOrNull() ?: 0L
+                var bytesCopied = 0L
+                val startTime = System.currentTimeMillis()
+                var lastUpdateTime = startTime
+                var lastBytesCopied = 0L
+
+                destFile.outputStream().use { output ->
+                    val input = session.inputStream
+                    val buffer = ByteArray(8192)
+                    var read: Int
+                    while (input.read(buffer).also { read = it } != -1) {
+                        output.write(buffer, 0, read)
+                        bytesCopied += read
+                        
+                        // Update progress in session
+                        val now = System.currentTimeMillis()
+                        if (now - lastUpdateTime > 500) { // Update every 500ms
+                            val timeDiffSeconds = (now - lastUpdateTime) / 1000.0
+                            val bytesDiff = bytesCopied - lastBytesCopied
+                            val speed = if (timeDiffSeconds > 0) (bytesDiff / timeDiffSeconds).toLong() else 0L
+                            
+                            val remainingBytes = contentLength - bytesCopied
+                            val eta = if (speed > 0) remainingBytes / speed else 0L
+                            
+                            activeSessions[sessionId] = transferSession.copy(
+                                transferredBytes = transferSession.transferredBytes + bytesDiff,
+                                speedBytesPerSecond = speed,
+                                etaSeconds = eta
+                            )
+                            
+                            lastUpdateTime = now
+                            lastBytesCopied = bytesCopied
+                        }
+                    }
+                }
+                
+                // Final update for this file
+                activeSessions[sessionId] = transferSession.copy(
+                    transferredBytes = transferSession.transferredBytes + (bytesCopied - lastBytesCopied),
+                    speedBytesPerSecond = 0,
+                    etaSeconds = 0
+                )
+
+                android.media.MediaScannerConnection.scanFile(context, arrayOf(destFile.absolutePath), null, null)
+                newUploadedFiles.tryEmit(destFile)
+
+                return newFixedLengthResponse(Response.Status.OK, "application/json", """{"success":true,"message":"File received"}""")
+            }
+
+            // ─── Browser Upload (Multipart) ───
+            val bodyMap = HashMap<String, String>()
+            session.parseBody(bodyMap)
+
             val uploadedFiles = mutableListOf<String>()
-
-            // NanoHTTPD stores uploaded files as temp files
-            // The temp file path is in bodyMap values
-            // File metadata comes from session.parameters
-            val params = session.parameters
             val fileNames = params["filename"] ?: emptyList()
-
-            // For multipart/form-data, NanoHTTPD puts temp paths in bodyMap
+            var fileIndex = 0
+            
             for ((key, tempPath) in bodyMap) {
                 if (key == "postData") continue
                 val tempFile = File(tempPath)
                 if (!tempFile.exists()) continue
 
-                // Get original filename from parameters, or use temp name
-                val originalName = fileNames.firstOrNull() ?: "upload_${System.currentTimeMillis()}"
-                val destFile = File(localShareDir, originalName)
+                val rawName = fileNames.getOrElse(fileIndex) { null } ?: "upload_${System.currentTimeMillis()}"
+                fileIndex++
 
-                // Handle duplicate names
-                val finalDest = if (destFile.exists()) {
-                    val base = destFile.nameWithoutExtension
-                    val ext = destFile.extension
-                    var counter = 1
-                    var candidate: File
-                    do {
-                        candidate = File(localShareDir, "${base}_${counter}.${ext}")
-                        counter++
-                    } while (candidate.exists())
-                    candidate
-                } else destFile
+                val destFile = getUniqueFile(localShareDir, rawName)
 
-                tempFile.copyTo(finalDest, overwrite = true)
-                uploadedFiles.add(finalDest.name)
-                newUploadedFiles.tryEmit(finalDest)
+                tempFile.copyTo(destFile, overwrite = true)
+                uploadedFiles.add(destFile.name)
+                newUploadedFiles.tryEmit(destFile)
 
-                // Notify the media scanner so it shows up in gallery/files
-                android.media.MediaScannerConnection.scanFile(
-                    context,
-                    arrayOf(finalDest.absolutePath),
-                    null,
-                    null
-                )
+                android.media.MediaScannerConnection.scanFile(context, arrayOf(destFile.absolutePath), null, null)
 
-                Log.d(TAG, "Received file: ${finalDest.name} from $ip")
-
-                accessLog.add(
-                    AccessLogEntry(
-                        ip = ip,
-                        filename = finalDest.name,
-                        action = AccessAction.UPLOAD
-                    )
-                )
+                Log.d(TAG, "Received file: ${destFile.name} from $ip")
+                accessLog.add(AccessLogEntry(ip = ip, filename = destFile.name, action = AccessAction.UPLOAD))
             }
-
-
 
             val json = JSONObject().apply {
                 put("success", true)
@@ -389,22 +591,218 @@ class FileShareServer(
                 put("message", "${uploadedFiles.size} file(s) received")
             }
 
-            return newFixedLengthResponse(
-                Response.Status.OK,
-                "application/json",
-                json.toString()
-            )
+            return newFixedLengthResponse(Response.Status.OK, "application/json", json.toString())
         } catch (e: Exception) {
             Log.e(TAG, "Upload error", e)
             val json = JSONObject().apply {
                 put("success", false)
                 put("error", e.message ?: "Upload failed")
             }
+            return newFixedLengthResponse(Response.Status.INTERNAL_ERROR, "application/json", json.toString())
+        }
+    }
+
+    private fun getUniqueFile(dir: File, filename: String): File {
+        val safeName = filename
+            .replace(Regex("[/\\\\]"), "_")
+            .replace(Regex("^\\.+"), "")
+            .ifBlank { "upload_${System.currentTimeMillis()}" }
+        
+        val destFile = File(dir, safeName)
+        if (!destFile.exists()) return destFile
+
+        val base = destFile.nameWithoutExtension
+        val ext = destFile.extension
+        var counter = 1
+        var candidate: File
+        do {
+            candidate = File(dir, "${base}_${counter}.${ext}")
+            counter++
+        } while (candidate.exists())
+        return candidate
+    }
+
+    // ─── Phone-to-Phone Push Transfer Handlers ─────────────────
+
+    /**
+     * POST /api/prepare-upload
+     * Sender sends file metadata. Receiver shows accept/reject dialog.
+     * Body: { "senderName": "...", "files": [ { "id", "fileName", "size", "fileType" } ] }
+     * Response: { "sessionId": "...", "status": "pending" }
+     */
+    private fun handlePrepareUpload(session: IHTTPSession, ip: String): Response {
+        try {
+            val bodyMap = HashMap<String, String>()
+            session.parseBody(bodyMap)
+            val body = bodyMap["postData"] ?: ""
+            val json = JSONObject(body)
+
+            val senderName = json.optString("senderName", "Unknown Device")
+            val filesJson = json.getJSONArray("files")
+
+            val files = mutableListOf<com.localshare.app.data.FileInfo>()
+            var totalSize = 0L
+            for (i in 0 until filesJson.length()) {
+                val fileJson = filesJson.getJSONObject(i)
+                val fileInfo = com.localshare.app.data.FileInfo(
+                    id = fileJson.optString("id", "file_$i"),
+                    fileName = fileJson.getString("fileName"),
+                    size = fileJson.optLong("size", 0),
+                    fileType = fileJson.optString("fileType", "application/octet-stream"),
+                    sha256 = fileJson.optString("sha256", null)
+                )
+                files.add(fileInfo)
+                totalSize += fileInfo.size
+            }
+
+            val sessionId = "session_${System.currentTimeMillis()}_${ip.replace(".", "")}"
+            val transferSession = com.localshare.app.data.TransferSession(
+                sessionId = sessionId,
+                senderName = senderName,
+                senderIp = ip,
+                files = files,
+                totalSize = totalSize,
+                status = com.localshare.app.data.SessionStatus.PENDING
+            )
+
+            activeSessions[sessionId] = transferSession
+            cleanupSessions()
+
+            // Notify the app layer (ViewModel/Service) about incoming transfer
+            onIncomingTransfer?.invoke(transferSession)
+
+            Log.d(TAG, "Incoming transfer from $senderName ($ip): ${files.size} files, $totalSize bytes")
+
+            val response = JSONObject().apply {
+                put("sessionId", sessionId)
+                put("status", "pending")
+                put("message", "Waiting for receiver to accept")
+            }
+
             return newFixedLengthResponse(
-                Response.Status.INTERNAL_ERROR,
+                Response.Status.OK,
+                "application/json",
+                response.toString()
+            ).also {
+                it.addHeader("Access-Control-Allow-Origin", "*")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Prepare upload error", e)
+            val json = JSONObject().apply {
+                put("success", false)
+                put("error", e.message ?: "Invalid request")
+            }
+            return newFixedLengthResponse(
+                Response.Status.BAD_REQUEST,
                 "application/json",
                 json.toString()
             )
+        }
+    }
+
+    private fun handleClearFiles(): Response {
+        ServerForegroundService.triggerClearFiles()
+        return newFixedLengthResponse(Response.Status.OK, "application/json", """{"status":"cleared"}""")
+    }
+
+    /**
+     * POST /api/cancel
+     * Cancel an active transfer session.
+     * Body: { "sessionId": "..." }
+     */
+    private fun handleCancelTransfer(session: IHTTPSession, ip: String): Response {
+        try {
+            val bodyMap = HashMap<String, String>()
+            session.parseBody(bodyMap)
+            val body = bodyMap["postData"] ?: ""
+            val json = JSONObject(body)
+            val sessionId = json.optString("sessionId", "")
+
+            if (sessionId.isEmpty()) {
+                return newFixedLengthResponse(
+                    Response.Status.BAD_REQUEST,
+                    "application/json",
+                    """{"error":"Missing sessionId"}"""
+                )
+            }
+
+            val cancelled = cancelSession(sessionId)
+            val response = JSONObject().apply {
+                put("success", cancelled)
+                put("message", if (cancelled) "Session cancelled" else "Session not found")
+            }
+
+            return newFixedLengthResponse(
+                Response.Status.OK,
+                "application/json",
+                response.toString()
+            ).also {
+                it.addHeader("Access-Control-Allow-Origin", "*")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Cancel transfer error", e)
+            return newFixedLengthResponse(
+                Response.Status.INTERNAL_ERROR,
+                "application/json",
+                """{"error":"Cancel failed"}"""
+            )
+        }
+    }
+
+    /**
+     * GET /api/session/status?sessionId=...
+     * Get the status of a specific transfer session.
+     */
+    private fun handleSessionStatus(session: IHTTPSession): Response {
+        val params = session.parameters
+        val sessionId = params["sessionId"]?.firstOrNull() ?: ""
+        if (sessionId.isEmpty()) {
+            return newFixedLengthResponse(Response.Status.BAD_REQUEST, "application/json", """{"error":"Missing sessionId"}""")
+        }
+
+        val transferSession = activeSessions[sessionId]
+        if (transferSession == null) {
+            return newFixedLengthResponse(Response.Status.NOT_FOUND, "application/json", """{"error":"Session not found"}""")
+        }
+
+        val json = JSONObject().apply {
+            put("sessionId", transferSession.sessionId)
+            put("status", transferSession.status.name)
+            put("transferredBytes", transferSession.transferredBytes)
+            put("speedBytesPerSecond", transferSession.speedBytesPerSecond)
+        }
+
+        return newFixedLengthResponse(Response.Status.OK, "application/json", json.toString()).also {
+            it.addHeader("Access-Control-Allow-Origin", "*")
+        }
+    }
+
+    /**
+     * GET /api/sessions
+     * Get list of active sessions (for the receiver to check status).
+     */
+    private fun serveSessions(): Response {
+        val sessions = activeSessions.values.map { session ->
+            JSONObject().apply {
+                put("sessionId", session.sessionId)
+                put("senderName", session.senderName)
+                put("senderIp", session.senderIp)
+                put("totalSize", session.totalSize)
+                put("fileCount", session.files.size)
+                put("status", session.status.name.lowercase())
+            }
+        }
+
+        val response = JSONObject().apply {
+            put("sessions", JSONArray(sessions))
+        }
+
+        return newFixedLengthResponse(
+            Response.Status.OK,
+            "application/json",
+            response.toString()
+        ).also {
+            it.addHeader("Access-Control-Allow-Origin", "*")
         }
     }
 
@@ -433,6 +831,7 @@ class FileShareServer(
                 resolvedMime.contains("pdf") -> "pdf"
                 resolvedMime.contains("zip") || resolvedMime.contains("rar") || resolvedMime.contains("tar") -> "archive"
                 resolvedMime.contains("apk") -> "android"
+                resolvedMime == "application/x-directory" -> "folder"
                 else -> "file"
             }
             
@@ -455,6 +854,7 @@ class FileShareServer(
             put("count", filtered.size)
             put("connectedDevices", connectedIps.size)
             put("pinProtected", pin != null)
+            put("encrypted", encryptionEnabled && encryptionKey != null)
         }
 
         return newFixedLengthResponse(
@@ -473,6 +873,7 @@ class FileShareServer(
             put("maxConnections", maxConnections)
             put("deviceName", deviceName)
             put("pinProtected", pin != null)
+            put("encrypted", encryptionEnabled && encryptionKey != null)
             put("sharedFileCount", getCachedFiles().size)
         }
 
@@ -483,42 +884,105 @@ class FileShareServer(
         )
     }
 
-    private fun serveDownload(@Suppress("UNUSED_PARAMETER") session: IHTTPSession, uri: String, ip: String): Response {
-        val fileId = extractFileId(uri) ?: return notFound()
-        val file = findFile(fileId) ?: return notFound()
+    private fun serveDownload(session: IHTTPSession, uri: String, ip: String): Response {
+        val fileId = extractFileId(uri)
+        Log.d(TAG, "serveDownload: uri=$uri fileId=$fileId")
+        if (fileId == null) return notFound()
+        val file = findFile(fileId)
+        Log.d(TAG, "serveDownload: file=${file?.name} mime=${file?.mimeType} path=${file?.path}")
+        if (file == null) return notFound()
 
         accessLog.add(AccessLogEntry(ip, file.name, AccessAction.DOWNLOAD))
+
+        val currentKey = encryptionKey
+        val shouldEncrypt = encryptionEnabled && currentKey != null
 
         // Virtual Text Files (pasted text) — not resumable
         if (file.mimeType == "text/plain" && file.path.startsWith("virtual://")) {
             val textContent = file.path.removePrefix("virtual://")
             val bytes = textContent.toByteArray()
-            val response = newFixedLengthResponse(Response.Status.OK, "text/plain", ByteArrayInputStream(bytes), bytes.size.toLong())
+            val responseBytes = if (shouldEncrypt) FileEncryption.encrypt(bytes, currentKey!!) else bytes
+            val response = newFixedLengthResponse(Response.Status.OK, "application/octet-stream", ByteArrayInputStream(responseBytes), responseBytes.size.toLong())
             response.addHeader("Content-Disposition", "attachment; filename=\"${file.name}\"")
+            if (shouldEncrypt) response.addHeader("X-Encrypted", "aes-256-gcm")
+            addDownloadHeaders(response)
             return response
         }
 
-        // Folder ZIP Streaming — not resumable (streamed on-the-fly)
+        // Folder ZIP — write to disk temp file, then stream
         if (file.mimeType == "application/x-directory") {
-            val pos = PipedOutputStream()
-            val pis = PipedInputStream(pos, 65536)
-
-            CoroutineScope(Dispatchers.IO).launch {
-                try {
-                    ZipOutputStream(pos).use { zos ->
-                        zipFolder(context, file.uri, zos, "${file.name}/")
-                    }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error zipping folder: ${file.name}", e)
+            val tempFile = File.createTempFile("folder_", ".zip", context.cacheDir)
+            tempFile.deleteOnExit()
+            try {
+                ZipOutputStream(tempFile.outputStream()).use { zos ->
+                    zipFolder(context, file.uri, zos, "${file.name}/")
                 }
-            }
 
-            val res = newChunkedResponse(Response.Status.OK, "application/zip", pis)
-            res.addHeader("Content-Disposition", "attachment; filename=\"${file.name}.zip\"")
-            return res
+                if (tempFile.length() > 0) {
+                    if (shouldEncrypt) {
+                        // Read zip, encrypt, serve as fixed response
+                        val zipBytes = tempFile.readBytes()
+                        tempFile.delete()
+                        val encryptedBytes = FileEncryption.encrypt(zipBytes, currentKey!!)
+                        val res = newFixedLengthResponse(
+                            Response.Status.OK, "application/octet-stream",
+                            ByteArrayInputStream(encryptedBytes), encryptedBytes.size.toLong()
+                        )
+                        res.addHeader("Content-Disposition", "attachment; filename=\"${file.name}.zip\"")
+                        res.addHeader("X-Encrypted", "aes-256-gcm")
+                        addDownloadHeaders(res)
+                        return res
+                    } else {
+                        val res = newChunkedResponse(
+                            Response.Status.OK,
+                            "application/zip",
+                            FileInputStream(tempFile)
+                        )
+                        res.addHeader("Content-Disposition", "attachment; filename=\"${file.name}.zip\"")
+                        addDownloadHeaders(res)
+                        return res
+                    }
+                }
+                tempFile.delete()
+                return notFound()
+            } catch (e: Exception) {
+                Log.e(TAG, "Error creating zip for folder: ${file.name}", e)
+                tempFile.delete()
+                return newFixedLengthResponse(
+                    Response.Status.INTERNAL_ERROR,
+                    MIME_PLAINTEXT,
+                    "Error creating zip: ${e.message}"
+                )
+            }
         }
 
-        // ─── Resumable Downloads via Range Requests ─────────────
+        // ─── Encrypted download (full file, no Range) ────────────
+        if (shouldEncrypt) {
+            try {
+                val physicalFile = File(file.path)
+                val fileBytes = if (physicalFile.exists() && physicalFile.canRead()) {
+                    physicalFile.readBytes()
+                } else {
+                    context.contentResolver.openInputStream(file.uri)?.use { it.readBytes() }
+                        ?: return notFound()
+                }
+                val encryptedBytes = FileEncryption.encrypt(fileBytes, currentKey!!)
+                val resolvedMimeType = resolveStreamMimeType(file.name, file.mimeType)
+                val response = newFixedLengthResponse(
+                    Response.Status.OK, "application/octet-stream",
+                    ByteArrayInputStream(encryptedBytes), encryptedBytes.size.toLong()
+                )
+                response.addHeader("Content-Disposition", "attachment; filename=\"${file.name}\"")
+                response.addHeader("X-Encrypted", "aes-256-gcm")
+                addDownloadHeaders(response)
+                return response
+            } catch (e: Exception) {
+                Log.e(TAG, "Error encrypting file for download: ${file.name}", e)
+                return newFixedLengthResponse(Response.Status.INTERNAL_ERROR, MIME_PLAINTEXT, "Encryption error")
+            }
+        }
+
+        // ─── Plain Resumable Downloads via Range Requests ────────
         val rangeHeader = session.headers?.get("range")
         val resolvedMimeType = resolveStreamMimeType(file.name, file.mimeType)
 
@@ -527,6 +991,7 @@ class FileShareServer(
         return if (physicalFile.exists() && physicalFile.canRead()) {
             val response = RangeRequestHandler.createResponse(physicalFile, resolvedMimeType, rangeHeader)
             response.addHeader("Content-Disposition", "attachment; filename=\"${file.name}\"")
+            addDownloadHeaders(response)
             response
         } else {
             // Fallback to content resolver
@@ -537,6 +1002,7 @@ class FileShareServer(
                     inputStream, file.size, resolvedMimeType, rangeHeader
                 )
                 response.addHeader("Content-Disposition", "attachment; filename=\"${file.name}\"")
+                addDownloadHeaders(response)
                 response
             } catch (e: Exception) {
                 Log.e(TAG, "Error opening file for download: ${file.name}", e)
@@ -545,17 +1011,41 @@ class FileShareServer(
         }
     }
 
+    private fun addDownloadHeaders(response: Response) {
+        response.addHeader("X-Content-Type-Options", "nosniff")
+        response.addHeader("X-Frame-Options", "DENY")
+        response.addHeader("Cache-Control", "no-store, no-cache, must-revalidate")
+        response.addHeader("Pragma", "no-cache")
+    }
+
     private fun zipFolder(context: Context, treeUri: Uri, zos: ZipOutputStream, basePath: String) {
-        val documentFile = DocumentFile.fromTreeUri(context, treeUri) ?: return
-        documentFile.listFiles().forEach { file ->
-            if (file.isDirectory) {
-                zipFolder(context, file.uri, zos, "$basePath${file.name}/")
+        val rootDoc = DocumentFile.fromTreeUri(context, treeUri)
+        if (rootDoc == null) {
+            Log.e(TAG, "zipFolder: DocumentFile.fromTreeUri returned null for $treeUri")
+            return
+        }
+        Log.d(TAG, "zipFolder: root=$basePath children=${rootDoc.listFiles().size}")
+        zipDocumentFile(rootDoc, zos, basePath)
+    }
+
+    private fun zipDocumentFile(doc: DocumentFile, zos: ZipOutputStream, basePath: String) {
+        doc.listFiles().forEach { child ->
+            val childPath = "$basePath${child.name}/"
+            if (child.isDirectory) {
+                val dirEntry = ZipEntry(childPath)
+                zos.putNextEntry(dirEntry)
+                zos.closeEntry()
+                zipDocumentFile(child, zos, childPath)
             } else {
-                val entryName = "$basePath${file.name}"
+                val entryName = "$basePath${child.name}"
                 val entry = ZipEntry(entryName)
                 zos.putNextEntry(entry)
-                context.contentResolver.openInputStream(file.uri)?.use { fis ->
-                    fis.copyTo(zos, 65536)
+                try {
+                    context.contentResolver.openInputStream(child.uri)?.use { fis ->
+                        fis.copyTo(zos, 65536)
+                    } ?: Log.w(TAG, "zipFolder: openInputStream returned null for ${child.name}")
+                } catch (e: Exception) {
+                    Log.e(TAG, "zipFolder: error reading ${child.name}", e)
                 }
                 zos.closeEntry()
             }
@@ -567,6 +1057,7 @@ class FileShareServer(
         val file = findFile(fileId) ?: return notFound()
 
         accessLog.add(AccessLogEntry(ip, file.name, AccessAction.STREAM))
+        // Note: streaming notifications are omitted to avoid spam (streaming is continuous)
 
         // Force correct MIME type for known video/audio extensions
         val mimeType = resolveStreamMimeType(file.name, file.mimeType)
@@ -598,6 +1089,9 @@ class FileShareServer(
      * for video files, which prevents browser <video> playback.
      */
     private fun resolveStreamMimeType(fileName: String, fallback: String): String {
+        if (fallback.startsWith("video/") || fallback.startsWith("audio/") || fallback.startsWith("image/")) {
+            return fallback
+        }
         val lower = fileName.lowercase()
         return when {
             lower.endsWith(".mp4") -> "video/mp4"
@@ -608,12 +1102,21 @@ class FileShareServer(
             lower.endsWith(".m4v") -> "video/mp4"
             lower.endsWith(".ts") -> "video/mp2t"
             lower.endsWith(".3gp") -> "video/3gpp"
+            lower.endsWith(".flv") -> "video/x-flv"
+            lower.endsWith(".wmv") -> "video/x-ms-wmv"
             lower.endsWith(".mp3") -> "audio/mpeg"
             lower.endsWith(".m4a") -> "audio/mp4"
             lower.endsWith(".ogg") -> "audio/ogg"
             lower.endsWith(".wav") -> "audio/wav"
             lower.endsWith(".flac") -> "audio/flac"
             lower.endsWith(".aac") -> "audio/aac"
+            lower.endsWith(".wma") -> "audio/x-ms-wma"
+            lower.endsWith(".jpg") || lower.endsWith(".jpeg") -> "image/jpeg"
+            lower.endsWith(".png") -> "image/png"
+            lower.endsWith(".gif") -> "image/gif"
+            lower.endsWith(".webp") -> "image/webp"
+            lower.endsWith(".bmp") -> "image/bmp"
+            lower.endsWith(".svg") -> "image/svg+xml"
             else -> fallback
         }
     }
@@ -627,17 +1130,24 @@ class FileShareServer(
         return newFixedLengthResponse(Response.Status.OK, "image/svg+xml", svg)
     }
 
+    @android.annotation.SuppressLint("ResourceType")
     private fun serveLogo(): Response {
         return try {
             val inputStream = context.resources.openRawResource(R.drawable.logo)
-            val available = inputStream.available().toLong()
-            RangeRequestHandler.createResponseFromStream(inputStream, available, "image/png", null)
+            try {
+                val available = inputStream.available().toLong()
+                RangeRequestHandler.createResponseFromStream(inputStream, available, "image/png", null)
+            } catch (e: Exception) {
+                inputStream.close()
+                throw e
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Error serving logo", e)
             notFound()
         }
     }
 
+    @android.annotation.SuppressLint("ResourceType")
     private fun serveLogoDark(): Response {
         return try {
             val inputStream = context.resources.openRawResource(R.drawable.logo_dark)
@@ -691,19 +1201,35 @@ class FileShareServer(
             when {
                 file.mimeType.startsWith("image/") -> {
                     val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-                    context.contentResolver.openInputStream(file.uri)?.use {
-                        BitmapFactory.decodeStream(it, null, options)
-                    }
-                    options.inSampleSize = calculateInSampleSize(options, 256, 256)
-                    options.inJustDecodeBounds = false
-                    context.contentResolver.openInputStream(file.uri)?.use {
-                        BitmapFactory.decodeStream(it, null, options)
+                    if (!file.path.startsWith("virtual://") && File(file.path).exists()) {
+                        FileInputStream(File(file.path)).use {
+                            BitmapFactory.decodeStream(it, null, options)
+                        }
+                        options.inSampleSize = calculateInSampleSize(options, 256, 256)
+                        options.inJustDecodeBounds = false
+                        FileInputStream(File(file.path)).use {
+                            BitmapFactory.decodeStream(it, null, options)
+                        }
+                    } else {
+                        context.contentResolver.openInputStream(file.uri)?.use {
+                            BitmapFactory.decodeStream(it, null, options)
+                        }
+                        options.inSampleSize = calculateInSampleSize(options, 256, 256)
+                        options.inJustDecodeBounds = false
+                        context.contentResolver.openInputStream(file.uri)?.use {
+                            BitmapFactory.decodeStream(it, null, options)
+                        }
                     }
                 }
                 file.mimeType.startsWith("video/") -> {
                     val retriever = MediaMetadataRetriever()
-                    context.contentResolver.openFileDescriptor(file.uri, "r")?.use { fd ->
-                        retriever.setDataSource(fd.fileDescriptor)
+                    val physicalFile = File(file.path)
+                    if (physicalFile.exists() && physicalFile.canRead()) {
+                        retriever.setDataSource(physicalFile.absolutePath)
+                    } else {
+                        context.contentResolver.openFileDescriptor(file.uri, "r")?.use { fd ->
+                            retriever.setDataSource(fd.fileDescriptor)
+                        }
                     }
                     val frame = retriever.getFrameAtTime(1000000, MediaMetadataRetriever.OPTION_CLOSEST_SYNC)
                     retriever.release()
@@ -786,31 +1312,95 @@ class FileShareServer(
 
         if (filesToZip.isEmpty()) return notFound()
 
-        val pos = PipedOutputStream()
-        val pis = PipedInputStream(pos, 65536)
+        val currentKey = encryptionKey
+        val shouldEncrypt = encryptionEnabled && currentKey != null
 
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                ZipOutputStream(pos).use { zos ->
-                    for (file in filesToZip) {
-                        val entry = ZipEntry(file.name)
-                        zos.putNextEntry(entry)
-                        context.contentResolver.openInputStream(file.uri)?.use { fis ->
-                            fis.copyTo(zos, 65536)
-                        }
-                        zos.closeEntry()
-                        accessLog.add(AccessLogEntry(ip, file.name, AccessAction.DOWNLOAD))
+        if (shouldEncrypt) {
+            // Buffer the entire ZIP, encrypt, then serve as fixed response
+            val baos = ByteArrayOutputStream()
+            ZipOutputStream(baos).use { zos ->
+                for (file in filesToZip) {
+                    val entry = ZipEntry(file.name)
+                    zos.putNextEntry(entry)
+                    context.contentResolver.openInputStream(file.uri)?.use { fis ->
+                        fis.copyTo(zos, 65536)
                     }
+                    zos.closeEntry()
+                    accessLog.add(AccessLogEntry(ip, file.name, AccessAction.DOWNLOAD))
                 }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error generating zip", e)
             }
-        }
+            val zipBytes = baos.toByteArray()
+            val encryptedBytes = FileEncryption.encrypt(zipBytes, currentKey!!)
+            val res = newFixedLengthResponse(
+                Response.Status.OK, "application/octet-stream",
+                ByteArrayInputStream(encryptedBytes), encryptedBytes.size.toLong()
+            )
+            res.addHeader("Content-Disposition", "attachment; filename=\"LocalShare.zip\"")
+            res.addHeader("X-Encrypted", "aes-256-gcm")
+            res.addHeader("Access-Control-Allow-Origin", "*")
+            return res
+        } else {
+            // Stream ZIP without encryption
+            val pos = PipedOutputStream()
+            val pis = PipedInputStream(pos, 65536)
 
-        val res = newChunkedResponse(Response.Status.OK, "application/zip", pis)
-        res.addHeader("Content-Disposition", "attachment; filename=\"LocalShare.zip\"")
-        res.addHeader("Access-Control-Allow-Origin", "*")
-        return res
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    ZipOutputStream(pos).use { zos ->
+                        for (file in filesToZip) {
+                            val entry = ZipEntry(file.name)
+                            zos.putNextEntry(entry)
+                            context.contentResolver.openInputStream(file.uri)?.use { fis ->
+                                fis.copyTo(zos, 65536)
+                            }
+                            zos.closeEntry()
+        accessLog.add(AccessLogEntry(ip, file.name, AccessAction.DOWNLOAD))
+        notifyFileAccess(file.name, "downloaded", ip)
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error generating zip", e)
+                } finally {
+                    try { pos.close() } catch (_: Exception) {}
+                }
+            }
+
+            val res = newChunkedResponse(Response.Status.OK, "application/zip", pis)
+            res.addHeader("Content-Disposition", "attachment; filename=\"LocalShare.zip\"")
+            res.addHeader("Access-Control-Allow-Origin", "*")
+            return res
+        }
+    }
+
+    private fun notifyFileAccess(fileName: String, action: String, fromIp: String) {
+        try {
+            val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+            val channelId = "localshare_access"
+
+            // Create channel if it doesn't exist
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                if (notificationManager.getNotificationChannel(channelId) == null) {
+                    val channel = android.app.NotificationChannel(
+                        channelId, "File Access",
+                        android.app.NotificationManager.IMPORTANCE_LOW
+                    ).apply {
+                        description = "Notifications when files are accessed"
+                    }
+                    notificationManager.createNotificationChannel(channel)
+                }
+            }
+
+            val notification = android.app.Notification.Builder(context, channelId)
+                .setSmallIcon(android.R.drawable.stat_sys_download_done)
+                .setContentTitle("File $action")
+                .setContentText("$fileName — from $fromIp")
+                .setAutoCancel(true)
+                .build()
+
+            notificationManager.notify(System.currentTimeMillis().toInt(), notification)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to send access notification", e)
+        }
     }
 
     fun resetConnections() {

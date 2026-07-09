@@ -16,6 +16,10 @@ data class ShareConfig(
         return copy(sharedFiles = sharedFiles.filter { it.id != id })
     }
 
+    fun removeFiles(ids: Set<Long>): ShareConfig {
+        return copy(sharedFiles = sharedFiles.filter { it.id !in ids })
+    }
+
     fun clear(): ShareConfig {
         return copy(sharedFiles = emptyList())
     }
