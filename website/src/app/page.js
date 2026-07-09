@@ -52,6 +52,7 @@ export default function Home() {
         
         {/* HERO SECTION */}
         <section className={styles.hero}>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 600, color: 'var(--accent-blue)', marginBottom: '1rem', letterSpacing: '0.1em', textTransform: 'uppercase' }}>LOCALSHARE</h2>
           <h1>
             AirDrop for Everything.<br />
             <span className="gradient-text">Completely Offline.</span>
@@ -146,7 +147,7 @@ export default function Home() {
           <a href="https://github.com/Kaifazad/LocalShare" target="_blank" rel="noopener noreferrer">GitHub Source</a>
           <a href="https://github.com/Kaifazad/LocalShare/issues/new/choose" target="_blank" rel="noopener noreferrer">Report a Bug / Request Feature</a>
         </div>
-        <p>© {new Date().getFullYear()} Kaif Azad. Open Source under the MIT License.</p>
+        <p>© {new Date().getFullYear()} Developed by <a href="https://kaifazad.in" target="_blank" rel="noopener noreferrer" style={{textDecoration: 'underline', color: 'white'}}>Kaif Azad</a>. Open Source under the MIT License.</p>
       </footer>
     </div>
   );
