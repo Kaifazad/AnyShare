@@ -96,7 +96,7 @@ export default function Home() {
 
         {/* HOW IT WORKS */}
         <section className={styles.howItWorks}>
-          <h2 className={styles.sectionTitle}>How It Works (A to Z)</h2>
+          <h2 className={styles.sectionTitle}>How It Works</h2>
           <div className={styles.stepsGrid}>
             <div className={`${styles.stepCard} glass-card`}>
               <span className={styles.stepNumber}>1</span>
@@ -147,7 +147,7 @@ export default function Home() {
           <a href="https://github.com/Kaifazad/LocalShare" target="_blank" rel="noopener noreferrer">GitHub Source</a>
           <a href="https://github.com/Kaifazad/LocalShare/issues/new/choose" target="_blank" rel="noopener noreferrer">Report a Bug / Request Feature</a>
         </div>
-        <p>© {new Date().getFullYear()} Developed by <a href="https://kaifazad.in" target="_blank" rel="noopener noreferrer" style={{textDecoration: 'underline', color: 'white'}}>Kaif Azad</a>. Open Source under the MIT License.</p>
+        <p>© {new Date().getFullYear()} Developed by <a href="https://kaifazad.in" target="_blank" rel="noopener noreferrer" style={{textDecoration: 'underline', color: 'var(--foreground)'}}>Kaif Azad</a>. Open Source under the MIT License.</p>
       </footer>
     </div>
   );
