@@ -55,7 +55,7 @@ export default function Home() {
           <h2 style={{ fontSize: '1.5rem', fontWeight: 600, color: 'var(--accent-blue)', marginBottom: '1rem', letterSpacing: '0.1em', textTransform: 'uppercase' }}>LOCALSHARE</h2>
           <h1>
             AirDrop for Everything.<br />
-            <span className="gradient-text">Completely Offline.</span>
+          <span className="gradient-text" style={{ color: 'var(--foreground)' }}>Completely Offline.</span>
           </h1>
           <p>
             A beautifully crafted, blazing-fast, and deeply integrated offline file sharing app for Android. Share gigabytes of data in seconds without an internet connection.
@@ -72,22 +72,22 @@ export default function Home() {
 
         {/* FEATURES GRID */}
         <section className={styles.features}>
-          <div className="glass-card">
+          <div className="surface-card">
             <div className={styles.featureIcon}><SpeedIcon /></div>
             <h3 className={styles.featureTitle}>Blazing Fast</h3>
             <p className={styles.featureDesc}>Transfers files using a direct local hotspot connection, maximizing speed without relying on external internet routing.</p>
           </div>
-          <div className="glass-card">
+          <div className="surface-card">
             <div className={styles.featureIcon}><WebIcon /></div>
             <h3 className={styles.featureTitle}>Cross-Platform Web UI</h3>
             <p className={styles.featureDesc}>Don't have the app on your laptop? Just open a browser. LocalShare serves a beautiful web UI for any device to connect seamlessly.</p>
           </div>
-          <div className="glass-card">
+          <div className="surface-card">
             <div className={styles.featureIcon}><SecureIcon /></div>
             <h3 className={styles.featureTitle}>Secure by Design</h3>
             <p className={styles.featureDesc}>All file transfers are protected with dynamic PIN authentication and localized entirely to your physical environment.</p>
           </div>
-          <div className="glass-card">
+          <div className="surface-card">
             <div className={styles.featureIcon}><DesignIcon /></div>
             <h3 className={styles.featureTitle}>Material 3 Aesthetics</h3>
             <p className={styles.featureDesc}>Built purely with Jetpack Compose, featuring a stunning glassmorphic UI, fluid animations, and dynamic colors.</p>
@@ -98,7 +98,7 @@ export default function Home() {
         <section className={styles.howItWorks}>
           <h2 className={styles.sectionTitle}>How It Works</h2>
           <div className={styles.stepsGrid}>
-            <div className={`${styles.stepCard} glass-card`}>
+            <div className={`${styles.stepCard} surface-card`}>
               <span className={styles.stepNumber}>1</span>
               <div className={styles.stepContent}>
                 <h3 className={styles.featureTitle}>Start the Server</h3>
@@ -107,7 +107,7 @@ export default function Home() {
                 </p>
               </div>
             </div>
-            <div className={`${styles.stepCard} glass-card`}>
+            <div className={`${styles.stepCard} surface-card`}>
               <span className={styles.stepNumber}>2</span>
               <div className={styles.stepContent}>
                 <h3 className={styles.featureTitle}>Connect Any Device</h3>
@@ -116,7 +116,7 @@ export default function Home() {
                 </p>
               </div>
             </div>
-            <div className={`${styles.stepCard} glass-card`}>
+            <div className={`${styles.stepCard} surface-card`}>
               <span className={styles.stepNumber}>3</span>
               <div className={styles.stepContent}>
                 <h3 className={styles.featureTitle}>Transfer & Authenticate</h3>

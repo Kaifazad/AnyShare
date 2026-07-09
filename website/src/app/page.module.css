@@ -28,13 +28,14 @@
   font-weight: 800;
   margin-bottom: 1.5rem;
   letter-spacing: -0.02em;
+  color: var(--foreground);
 }
 
 .hero p {
   font-size: clamp(1.2rem, 3vw, 1.5rem);
-  color: rgba(17, 24, 39, 0.7);
+  color: var(--foreground-secondary);
   margin-bottom: 3rem;
-  font-weight: 300;
+  font-weight: 400;
 }
 
 .buttonGroup {
@@ -48,27 +49,28 @@
   display: inline-flex;
   align-items: center;
   gap: 0.75rem;
-  background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple));
+  background: var(--accent-primary);
   color: white;
   padding: 1.2rem 2.5rem;
   font-size: 1.1rem;
   font-weight: 600;
   border-radius: 50px;
-  box-shadow: 0 10px 30px rgba(0, 112, 243, 0.3);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 8px 24px rgba(0, 112, 243, 0.25);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 
 .ctaButton:hover {
-  transform: translateY(-2px) scale(1.02);
-  box-shadow: 0 15px 40px rgba(121, 40, 202, 0.4);
+  transform: translateY(-2px);
+  background: #0060D2;
+  box-shadow: 0 12px 32px rgba(0, 112, 243, 0.35);
 }
 
 .secondaryButton {
   display: inline-flex;
   align-items: center;
   gap: 0.75rem;
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border);
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
   color: var(--foreground);
   padding: 1.2rem 2.5rem;
   font-size: 1.1rem;
@@ -79,7 +81,7 @@
 
 .secondaryButton:hover {
   transform: translateY(-2px);
-  background: rgba(0, 0, 0, 0.05);
+  background: #EBEBEB;
 }
 
 .sectionTitle {
@@ -88,32 +90,37 @@
   margin-bottom: 3rem;
   text-align: center;
   width: 100%;
+  color: var(--foreground);
 }
 
 .features {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 2rem;
   width: 100%;
   margin-bottom: 8rem;
 }
 
 .featureIcon {
-  width: 48px;
-  height: 48px;
+  width: 52px;
+  height: 52px;
   margin-bottom: 1.5rem;
-  color: var(--accent-blue);
+  color: var(--accent-primary);
+  background: rgba(0, 112, 243, 0.1);
+  padding: 12px;
+  border-radius: 16px;
 }
 
 .featureTitle {
   font-size: 1.5rem;
-  font-weight: 600;
+  font-weight: 700;
   margin-bottom: 0.75rem;
+  color: var(--foreground);
 }
 
 .featureDesc {
-  color: rgba(17, 24, 39, 0.7);
-  font-weight: 300;
+  color: var(--foreground-secondary);
+  font-weight: 400;
   line-height: 1.6;
 }
 
@@ -135,11 +142,11 @@
 
 .stepNumber {
   position: absolute;
-  top: -10px;
-  right: -10px;
-  font-size: 8rem;
+  top: -16px;
+  right: 0px;
+  font-size: 10rem;
   font-weight: 800;
-  color: rgba(17, 24, 39, 0.05);
+  color: rgba(0, 0, 0, 0.03);
   line-height: 1;
   z-index: 0;
 }
@@ -157,7 +164,7 @@
 }
 
 .openSource p {
-  color: rgba(17, 24, 39, 0.7);
+  color: var(--foreground-secondary);
   font-size: 1.2rem;
   margin-bottom: 2rem;
 }
@@ -166,8 +173,8 @@
   width: 100%;
   padding: 3rem 2rem;
   text-align: center;
-  border-top: 1px solid var(--glass-border);
-  color: rgba(17, 24, 39, 0.6);
+  border-top: 1px solid var(--surface-border);
+  color: var(--foreground-secondary);
   font-size: 0.9rem;
 }
 
@@ -179,10 +186,11 @@
 }
 
 .footerLinks a {
-  color: rgba(17, 24, 39, 0.8);
+  color: var(--foreground);
   transition: color 0.2s ease;
+  font-weight: 500;
 }
 
 .footerLinks a:hover {
-  color: var(--accent-blue);
+  color: var(--accent-primary);
 }
