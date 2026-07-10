@@ -104,24 +104,30 @@ object NsdHelper {
             }
             override fun onServiceFound(service: NsdServiceInfo) {
                 if (service.serviceType == SERVICE_TYPE) {
-                    nsdManager?.resolveService(service, object : NsdManager.ResolveListener {
-                        override fun onResolveFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {
-                            Log.e(TAG, "Resolve failed: $errorCode")
-                        }
-                        override fun onServiceResolved(serviceInfo: NsdServiceInfo) {
-                            val ip = serviceInfo.host.hostAddress
-                            if (ip != null && ip != "0.0.0.0") {
-                                val device = com.localshare.app.server.DiscoveredDevice(
-                                    alias = serviceInfo.serviceName,
-                                    ip = ip,
-                                    port = serviceInfo.port,
-                                    lastSeen = System.currentTimeMillis()
-                                )
-                                devicesMap[ip] = device
-                                _discoveredDevices.value = devicesMap.values.toList()
+                    try {
+                        nsdManager?.resolveService(service, object : NsdManager.ResolveListener {
+                            override fun onResolveFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {
+                                Log.e(TAG, "Resolve failed: $errorCode")
                             }
-                        }
-                    })
+                            override fun onServiceResolved(serviceInfo: NsdServiceInfo) {
+                                val ip = serviceInfo.host.hostAddress
+                                if (ip != null && ip != "0.0.0.0") {
+                                    val device = com.localshare.app.server.DiscoveredDevice(
+                                        alias = serviceInfo.serviceName,
+                                        ip = ip,
+                                        port = serviceInfo.port,
+                                        lastSeen = System.currentTimeMillis()
+                                    )
+                                    devicesMap[ip] = device
+                                    _discoveredDevices.value = devicesMap.values.toList()
+                                }
+                            }
+                        })
+                    } catch (e: IllegalArgumentException) {
+                        Log.e(TAG, "Concurrent resolve error", e)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Resolve error", e)
+                    }
                 }
             }
             override fun onServiceLost(service: NsdServiceInfo) {

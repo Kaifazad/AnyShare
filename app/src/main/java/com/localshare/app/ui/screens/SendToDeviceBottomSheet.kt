@@ -333,7 +333,7 @@ private suspend fun scanForDevices(): List<DiscoveredDevice> = withContext(Dispa
         val socket = java.net.MulticastSocket(53318)
         socket.soTimeout = 2000
         val group = java.net.InetAddress.getByName("224.0.0.167")
-        val packet = java.net.DatagramPacket(ByteArray(1024), 1024, group, 53317)
+        val packet = java.net.DatagramPacket(ByteArray(1024), 1024)
 
         // Send discovery request
         val requestData = """{"app":"LocalShare","type":"discover"}""".toByteArray()
