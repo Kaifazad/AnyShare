@@ -23,3 +23,13 @@
 # General
 -dontwarn fi.iki.elonen.**
 -dontwarn org.nanohttpd.**
+
+# Keep data models and enums to prevent serialization crashes (Room, DataStore, JSON)
+-keep class com.localshare.app.data.** { *; }
+
+# Keep all enums safe
+-keepclassmembers enum * {
+    public static **[] values();
+    public static ** valueOf(java.lang.String);
+}
+-keepnames enum *
