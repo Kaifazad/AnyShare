@@ -187,19 +187,17 @@ fun ReceiveScreenTab(viewModel: FileShareViewModel) {
                     Spacer(modifier = Modifier.height(20.dp))
 
                     // Stop server button
-                    val stopInteraction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-                    OutlinedButton(
+                    Button(
                         onClick = { viewModel.toggleServer() },
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().height(52.dp),
                         shape = RoundedCornerShape(12.dp),
-                        interactionSource = stopInteraction,
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = MaterialTheme.colorScheme.error
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error
                         )
                     ) {
-                        Icon(Icons.Filled.Stop, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Filled.Stop, contentDescription = null, modifier = Modifier.size(20.dp))
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Stop Server", fontWeight = FontWeight.Bold)
+                        Text("Stop Server", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
                     }
                 }
             }

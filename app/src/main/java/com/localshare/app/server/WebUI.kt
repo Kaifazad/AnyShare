@@ -1494,7 +1494,7 @@ function bootUpload() {
     if (!confirmed) return;
     try {
       await fetch('/api/files/clear', { method: 'POST' });
-      fetchFiles();
+      load();
     } catch(e) {}
   });
 

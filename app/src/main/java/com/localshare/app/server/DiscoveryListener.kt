@@ -73,11 +73,18 @@ class DiscoveryListener(private val context: Context) {
 
             var socket: MulticastSocket? = null
             try {
-                socket = MulticastSocket(DiscoveryBroadcaster.MULTICAST_PORT)
+                // Bind to the correct network interface (handles hotspot/tethering)
+                val localIp = NetworkUtils.getLocalIpAddress(context)
+                val bindAddr = if (localIp != null && localIp != "0.0.0.0") {
+                    java.net.InetSocketAddress(localIp, DiscoveryBroadcaster.MULTICAST_PORT)
+                } else {
+                    java.net.InetSocketAddress(DiscoveryBroadcaster.MULTICAST_PORT)
+                }
+                socket = MulticastSocket(bindAddr)
                 socket.soTimeout = 0 // Wait indefinitely
                 val groupAddress = InetAddress.getByName(DiscoveryBroadcaster.MULTICAST_GROUP)
-                
-                // Join group
+
+                // Join group on the correct interface
                 try {
                     val networkInterface = NetworkUtils.getWifiNetworkInterface(context)
                     if (networkInterface != null) {
@@ -86,6 +93,7 @@ class DiscoveryListener(private val context: Context) {
                         socket.joinGroup(groupAddress)
                     }
                 } catch (e: Exception) {
+                    Log.w(TAG, "Failed to join multicast on specific interface, trying default: ${e.message}")
                     socket.joinGroup(groupAddress)
                 }
 

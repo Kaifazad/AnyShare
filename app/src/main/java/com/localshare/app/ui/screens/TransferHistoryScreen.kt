@@ -59,7 +59,7 @@ fun TransferHistoryScreen(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    "Send files to nearby devices to see history here.",
+                    "Files downloaded via browser will not appear here.\nThis tab only shows direct phone-to-phone transfers.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.outline,
                     textAlign = TextAlign.Center

@@ -27,13 +27,13 @@ class CrashRepository(private val context: Context) {
         }
     }
 
-    fun loadAll(): List<CrashReport> = runBlocking {
+    suspend fun loadAll(): List<CrashReport> {
         val prefs = context.dataStore.data.first()
-        val json = prefs[KEY_CRASH_REPORTS] ?: return@runBlocking emptyList()
-        deserialize(json)
+        val json = prefs[KEY_CRASH_REPORTS] ?: return emptyList()
+        return deserialize(json)
     }
 
-    fun clear() = runBlocking {
+    suspend fun clear() {
         context.dataStore.edit { prefs ->
             prefs.remove(KEY_CRASH_REPORTS)
         }

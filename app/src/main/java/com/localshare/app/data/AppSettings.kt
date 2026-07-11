@@ -35,5 +35,6 @@ data class AppSettings(
     val maxConnections: Int = 3,
     val enableNearbyDiscovery: Boolean = true,
     val onboardingCompleted: Boolean = false,
-    val encryptionEnabled: Boolean = false
+    val encryptionEnabled: Boolean = false,
+    val clipboardSyncEnabled: Boolean = true
 )

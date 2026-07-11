@@ -46,6 +46,7 @@ class FileShareActivity : ComponentActivity() {
 
         setContent {
             val settings by viewModel.appSettings.collectAsState()
+            val settingsLoaded by viewModel.settingsLoaded.collectAsState()
             val systemIsDark = isSystemInDarkTheme()
 
             val useDarkTheme = when (settings.themeMode) {
@@ -67,34 +68,38 @@ class FileShareActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    when {
-                        // First launch: show onboarding
-                        !settings.onboardingCompleted -> {
-                            OnboardingScreen(
-                                onComplete = { viewModel.completeOnboarding() }
-                            )
-                        }
-                        // Permissions not yet granted: show permission screen
-                        !permissionsRequested && !hasStoragePermission() -> {
-                            PermissionsScreen(
-                                onPermissionsGranted = { permissionsRequested = true },
-                                onSkip = { permissionsRequested = true }
-                            )
-                        }
-                        // Normal app flow
-                        else -> {
-                            LocalShareApp(viewModel = viewModel)
+                    if (!settingsLoaded) {
+                        // Show nothing while settings are loading
+                    } else {
+                        when {
+                            // First launch: show onboarding
+                            !settings.onboardingCompleted -> {
+                                OnboardingScreen(
+                                    onComplete = { viewModel.completeOnboarding() }
+                                )
+                            }
+                            // Permissions not yet granted: show permission screen
+                            !permissionsRequested && !hasStoragePermission() -> {
+                                PermissionsScreen(
+                                    onPermissionsGranted = { permissionsRequested = true },
+                                    onSkip = { permissionsRequested = true }
+                                )
+                            }
+                            // Normal app flow
+                            else -> {
+                                LocalShareApp(viewModel = viewModel)
 
-                            // Show incoming transfer dialog when another device pushes files
-                            val incomingTransfer by viewModel.incomingTransfer.collectAsState()
-                            incomingTransfer?.let { session ->
-                                if (session.status == com.localshare.app.data.SessionStatus.PENDING) {
-                                    IncomingTransferDialog(
-                                        session = session,
-                                        onAccept = { viewModel.acceptTransfer(it) },
-                                        onReject = { viewModel.rejectTransfer(it) },
-                                        onDismiss = { viewModel.dismissIncomingTransfer() }
-                                    )
+                                // Show incoming transfer dialog when another device pushes files
+                                val incomingTransfer by viewModel.incomingTransfer.collectAsState()
+                                incomingTransfer?.let { session ->
+                                    if (session.status == com.localshare.app.data.SessionStatus.PENDING) {
+                                        IncomingTransferDialog(
+                                            session = session,
+                                            onAccept = { viewModel.acceptTransfer(it) },
+                                            onReject = { viewModel.rejectTransfer(it) },
+                                            onDismiss = { viewModel.dismissIncomingTransfer() }
+                                        )
+                                    }
                                 }
                             }
                         }

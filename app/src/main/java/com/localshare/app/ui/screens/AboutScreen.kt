@@ -281,19 +281,6 @@ fun AboutScreen(onBackClick: () -> Unit) {
                 }
             )
 
-            Spacer(modifier = Modifier.height(10.dp))
-
-            InfoItemCard(
-                icon = Icons.Rounded.Delete,
-                title = "Privacy Policy",
-                subtitle = "Read our privacy commitment",
-                onClick = {
-                    context.startActivity(
-                        Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/Kaifazad/LocalShare/blob/main/PRIVACY.md"))
-                    )
-                }
-            )
-
             Spacer(modifier = Modifier.height(40.dp))
         }
     }

@@ -10,16 +10,17 @@ import java.net.NetworkInterface
 import java.util.Collections
 
 /**
- * Utility to detect the device's local Wi-Fi IP address.
+ * Utility to detect the device's local IP address.
+ * Handles Wi-Fi, hotspot/tethering, and Ethernet interfaces.
  */
 object NetworkUtils {
 
     /**
-     * Get the device's local IP address on the Wi-Fi network.
-     * Falls back to enumerating network interfaces if WifiManager fails.
+     * Get the device's local IP address on the active network.
+     * Handles Wi-Fi, hotspot (tethering), USB tethering, and Ethernet.
      */
     fun getLocalIpAddress(context: Context): String {
-        // Try WifiManager first
+        // 1. Try WifiManager first (works for Wi-Fi connected mode)
         try {
             val wifiManager = context.applicationContext
                 .getSystemService(Context.WIFI_SERVICE) as? WifiManager
@@ -40,21 +41,44 @@ object NetworkUtils {
             }
         } catch (_: Exception) { }
 
-        // Fallback: enumerate network interfaces
+        // 2. Fallback: enumerate ALL network interfaces
+        //    This catches hotspot (wlan1/ap0), USB tethering (rndis0),
+        //    Ethernet (eth0), and any other non-loopback interface.
         try {
             val interfaces = Collections.list(NetworkInterface.getNetworkInterfaces())
+            // Collect all valid non-loopback IPv4 addresses
+            val candidates = mutableListOf<Pair<String, Int>>() // (ip, interface priority)
+
             for (networkInterface in interfaces) {
                 if (!networkInterface.isUp || networkInterface.isLoopback) continue
+
+                val name = networkInterface.name.lowercase()
+                // Priority: hotspot/tethering interfaces first
+                val priority = when {
+                    name.contains("ap") || name.contains("wlan1") -> 100  // hotspot
+                    name.contains("rndis") || name.contains("usb") -> 90  // USB tethering
+                    name.contains("tether") -> 85                          // tethering
+                    name.contains("wlan") -> 70                            // Wi-Fi
+                    name.contains("eth") -> 60                             // Ethernet
+                    name.contains("rmnet") -> 50                           // cellular
+                    else -> 10                                              // anything else
+                }
 
                 val addresses = Collections.list(networkInterface.inetAddresses)
                 for (address in addresses) {
                     if (address is Inet4Address && !address.isLoopbackAddress) {
                         val hostAddress = address.hostAddress
                         if (hostAddress != null && hostAddress != "0.0.0.0") {
-                            return hostAddress
+                            candidates.add(hostAddress to priority)
                         }
                     }
                 }
+            }
+
+            // Return the highest-priority IP
+            if (candidates.isNotEmpty()) {
+                candidates.sortByDescending { it.second }
+                return candidates.first().first
             }
         } catch (_: Exception) { }
 
@@ -62,7 +86,8 @@ object NetworkUtils {
     }
 
     /**
-     * Finds the NetworkInterface associated with Wi-Fi.
+     * Finds the NetworkInterface associated with the current active network.
+     * Works for both Wi-Fi and hotspot modes.
      */
     fun getWifiNetworkInterface(context: Context): NetworkInterface? {
         val ip = getLocalIpAddress(context)
@@ -75,7 +100,7 @@ object NetworkUtils {
     }
 
     /**
-     * Check if the device is connected to a Wi-Fi network.
+     * Check if the device is connected to a Wi-Fi or hotspot network.
      */
     fun isWifiConnected(context: Context): Boolean {
         val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE)
@@ -84,6 +109,7 @@ object NetworkUtils {
         val network = connectivityManager.activeNetwork ?: return false
         val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
 
-        return capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+        return capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
+               capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)
     }
 }

@@ -13,9 +13,6 @@ import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.rounded.Movie
 import androidx.compose.material.icons.rounded.History
-import androidx.compose.material.icons.rounded.Send
-import androidx.compose.material.icons.filled.WifiTethering
-import androidx.compose.material.icons.outlined.WifiTethering
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -73,6 +70,9 @@ import com.localshare.app.ui.screens.HomeScreen
 import com.localshare.app.ui.screens.SettingsScreen
 import com.localshare.app.ui.screens.AboutScreen
 import com.localshare.app.ui.screens.LogsScreen
+import com.localshare.app.ui.screens.HowToUseScreen
+import com.localshare.app.ui.screens.BugReportScreen
+import com.localshare.app.ui.screens.PrivacyPolicyScreen
 import androidx.compose.runtime.collectAsState
 import com.localshare.app.data.ThemeMode
 import androidx.compose.ui.layout.ContentScale
@@ -94,13 +94,12 @@ sealed class Screen(
     val selectedIcon: ImageVector,
     val unselectedIcon: ImageVector
 ) {
-    data object Send : Screen("send", "Send", Icons.Filled.Home, Icons.Outlined.Home) // Using Home icon for Send temporarily, will change later
-    data object Receive : Screen("receive", "Receive", Icons.Filled.WifiTethering, Icons.Outlined.WifiTethering)
+    data object Send : Screen("send", "Send", Icons.Filled.Home, Icons.Outlined.Home)
     data object History : Screen("history", "History", Icons.Rounded.History, Icons.Rounded.History)
     data object Settings : Screen("settings", "Settings", Icons.Filled.Settings, Icons.Outlined.Settings)
 }
 
-val screens = listOf(Screen.Send, Screen.Receive, Screen.History, Screen.Settings)
+val screens = listOf(Screen.Send, Screen.History, Screen.Settings)
 
 // ─── Main App Composable ───────────────────────────────────────────
 
@@ -140,6 +139,21 @@ fun LocalShareApp(viewModel: FileShareViewModel = viewModel()) {
         composable("logs") {
             LogsScreen(
                 viewModel = viewModel,
+                onBack = { rootNavController.popBackStack() }
+            )
+        }
+        composable("how_to_use") {
+            HowToUseScreen(
+                onBack = { rootNavController.popBackStack() }
+            )
+        }
+        composable("bug_report") {
+            BugReportScreen(
+                onBack = { rootNavController.popBackStack() }
+            )
+        }
+        composable("privacy_policy") {
+            PrivacyPolicyScreen(
                 onBack = { rootNavController.popBackStack() }
             )
         }
@@ -205,46 +219,7 @@ fun MainFlow(viewModel: FileShareViewModel, rootNavController: NavController) {
     var settingsSubPageActive by remember { mutableStateOf(false) }
 
     val incomingSession by viewModel.incomingTransfer.collectAsState()
-    
     val updateInfo by viewModel.updateInfo.collectAsState()
-    var hasShownUpdateDialog by remember { mutableStateOf(false) }
-    val context = LocalContext.current
-    
-    LaunchedEffect(Unit) {
-        val currentVersion = try {
-            val pInfo = context.packageManager.getPackageInfo(context.packageName, 0)
-            pInfo.versionName ?: "1.0"
-        } catch (e: Exception) {
-            "1.0"
-        }
-        viewModel.checkForUpdates(currentVersion)
-    }
-
-    if (updateInfo != null && !hasShownUpdateDialog) {
-        androidx.compose.material3.AlertDialog(
-            onDismissRequest = { hasShownUpdateDialog = true },
-            title = { Text("Update Available") },
-            text = { Text("A new version (${updateInfo?.version}) of LocalShare is available! Would you like to download it now?") },
-            confirmButton = {
-                androidx.compose.material3.TextButton(onClick = {
-                    hasShownUpdateDialog = true
-                    if (updateInfo?.apkUrl != null) {
-                        com.localshare.app.util.UpdateManager.downloadAndInstallUpdate(context, updateInfo!!.apkUrl!!)
-                    } else {
-                        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(updateInfo?.releaseUrl))
-                        context.startActivity(intent)
-                    }
-                }) {
-                    Text("Update")
-                }
-            },
-            dismissButton = {
-                androidx.compose.material3.TextButton(onClick = { hasShownUpdateDialog = true }) {
-                    Text("Later")
-                }
-            }
-        )
-    }
 
     // Bottom sheet style accept/reject (slides up from bottom)
     if (incomingSession != null && incomingSession?.status == com.localshare.app.data.SessionStatus.PENDING) {
@@ -369,9 +344,6 @@ fun MainFlow(viewModel: FileShareViewModel, rootNavController: NavController) {
                         navController = rootNavController
                     )
                 }
-                composable(Screen.Receive.route) {
-                    com.localshare.app.ui.screens.ReceiveScreenTab(viewModel = viewModel)
-                }
                 composable(Screen.History.route) {
                     com.localshare.app.ui.screens.TransferHistoryScreen(
                         onNavigateBack = { /* No-op, it's a tab now */ }
@@ -381,6 +353,9 @@ fun MainFlow(viewModel: FileShareViewModel, rootNavController: NavController) {
                     SettingsScreen(
                         viewModel = viewModel,
                         onNavigateToAbout = { rootNavController.navigate("about") },
+                        onNavigateToHowToUse = { rootNavController.navigate("how_to_use") },
+                        onNavigateToBugReport = { rootNavController.navigate("bug_report") },
+                        onNavigateToPrivacyPolicy = { rootNavController.navigate("privacy_policy") },
                         onSubPageChanged = { settingsSubPageActive = it }
                     )
                 }

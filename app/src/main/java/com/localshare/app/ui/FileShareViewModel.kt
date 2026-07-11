@@ -65,6 +65,9 @@ class FileShareViewModel(application: Application) : AndroidViewModel(applicatio
     private val _appSettings = MutableStateFlow(AppSettings())
     val appSettings: StateFlow<AppSettings> = _appSettings.asStateFlow()
 
+    private val _settingsLoaded = MutableStateFlow(false)
+    val settingsLoaded: StateFlow<Boolean> = _settingsLoaded.asStateFlow()
+
     // ─── Crash Reports ──────────────────────────────────────────
 
     private val crashRepository = CrashRepository(application)
@@ -73,12 +76,28 @@ class FileShareViewModel(application: Application) : AndroidViewModel(applicatio
     
     // ─── App Updates ────────────────────────────────────────────
 
+    enum class UpdateStatus { IDLE, CHECKING, UP_TO_DATE, UPDATE_AVAILABLE, ERROR }
+
     private val _updateInfo = MutableStateFlow<com.localshare.app.util.UpdateInfo?>(null)
     val updateInfo: StateFlow<com.localshare.app.util.UpdateInfo?> = _updateInfo.asStateFlow()
 
+    private val _updateStatus = MutableStateFlow(UpdateStatus.IDLE)
+    val updateStatus: StateFlow<UpdateStatus> = _updateStatus.asStateFlow()
+
     fun checkForUpdates(currentVersion: String) {
         viewModelScope.launch {
-            _updateInfo.value = com.localshare.app.util.UpdateChecker.checkForUpdate(currentVersion)
+            _updateStatus.value = UpdateStatus.CHECKING
+            try {
+                val info = com.localshare.app.util.UpdateChecker.checkForUpdate(currentVersion)
+                if (info != null) {
+                    _updateInfo.value = info
+                    _updateStatus.value = UpdateStatus.UPDATE_AVAILABLE
+                } else {
+                    _updateStatus.value = UpdateStatus.UP_TO_DATE
+                }
+            } catch (e: Exception) {
+                _updateStatus.value = UpdateStatus.ERROR
+            }
         }
     }
 
@@ -119,17 +138,21 @@ class FileShareViewModel(application: Application) : AndroidViewModel(applicatio
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     init {
-        // Load persisted settings
-        _appSettings.value = settingsRepository.load()
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            // Load persisted settings
+            val initialSettings = settingsRepository.load()
+            _appSettings.value = initialSettings
+            _settingsLoaded.value = true
 
-        // Load crash reports
-        _crashReports.value = crashRepository.loadAll()
-        
-        // Sync server settings
-        syncServerSettings()
+            // Load crash reports
+            _crashReports.value = crashRepository.loadAll()
+            
+            // Sync server settings
+            syncServerSettings()
 
-        // Sync haptic setting
-        com.localshare.app.ui.utils.HapticHelper.enabled = _appSettings.value.hapticEnabled
+            // Sync haptic setting
+            com.localshare.app.ui.utils.HapticHelper.enabled = initialSettings.hapticEnabled
+        }
 
         // Periodically refresh logs
         viewModelScope.launch {
@@ -169,7 +192,7 @@ class FileShareViewModel(application: Application) : AndroidViewModel(applicatio
                 .getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
             while (true) {
                 try {
-                    if (ServerForegroundService.isRunning.value) {
+                    if (ServerForegroundService.isRunning.value && _appSettings.value.clipboardSyncEnabled) {
                         val clip = clipboard.primaryClip
                         if (clip != null && clip.itemCount > 0) {
                             val text = clip.getItemAt(0).text?.toString() ?: ""
@@ -308,8 +331,10 @@ class FileShareViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun clearCrashReports() {
-        crashRepository.clear()
-        _crashReports.value = emptyList()
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            crashRepository.clear()
+            _crashReports.value = emptyList()
+        }
     }
 
     // ─── Settings Actions ───────────────────────────────────────
@@ -317,7 +342,9 @@ class FileShareViewModel(application: Application) : AndroidViewModel(applicatio
     private fun updateSettings(transform: (AppSettings) -> AppSettings) {
         val newSettings = transform(_appSettings.value)
         _appSettings.value = newSettings
-        settingsRepository.save(newSettings)
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            settingsRepository.save(newSettings)
+        }
         syncServerSettings()
         com.localshare.app.ui.utils.HapticHelper.enabled = newSettings.hapticEnabled
     }
@@ -341,6 +368,8 @@ class FileShareViewModel(application: Application) : AndroidViewModel(applicatio
     fun setThemeColorSeed(seed: String) = updateSettings { it.copy(themeColorSeed = seed, colorPalette = ColorPalette.SYSTEM) }
 
     fun setEncryptionEnabled(enabled: Boolean) = updateSettings { it.copy(encryptionEnabled = enabled) }
+
+    fun setClipboardSyncEnabled(enabled: Boolean) = updateSettings { it.copy(clipboardSyncEnabled = enabled) }
 
     fun completeOnboarding() = updateSettings { it.copy(onboardingCompleted = true) }
 

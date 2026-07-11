@@ -54,6 +54,9 @@ import androidx.compose.material.icons.rounded.Devices
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.automirrored.rounded.Help
 import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.BugReport
+import androidx.compose.material.icons.rounded.Security
+import androidx.compose.material.icons.rounded.SystemUpdate
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -104,44 +107,12 @@ import androidx.compose.material.icons.rounded.SystemUpdate
 fun SettingsScreen(
     viewModel: FileShareViewModel,
     onNavigateToAbout: () -> Unit,
+    onNavigateToHowToUse: () -> Unit,
+    onNavigateToBugReport: () -> Unit,
+    onNavigateToPrivacyPolicy: () -> Unit,
     onSubPageChanged: ((Boolean) -> Unit)? = null
 ) {
     val settings by viewModel.appSettings.collectAsState()
-
-    var showHowToUseDialog by remember { mutableStateOf(false) }
-
-    if (showHowToUseDialog) {
-        AlertDialog(
-            onDismissRequest = { showHowToUseDialog = false },
-            title = {
-                Text(
-                    text = "How to Use LocalShare",
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.titleLarge
-                )
-            },
-            text = {
-                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                    Text("1. Connect to Wi-Fi", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                    Text("Make sure both this device and the receiving device are connected to the same Wi-Fi network or hotspot.", style = MaterialTheme.typography.bodyMedium)
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text("2. Select Files", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                    Text("Go to the Home or Files tab to pick the items you want to share.", style = MaterialTheme.typography.bodyMedium)
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text("3. Start Server", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                    Text("Ensure the server is running. You will see a green 'Server Running' indicator.", style = MaterialTheme.typography.bodyMedium)
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text("4. Download on Receiver", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                    Text("Open the web browser on the receiving device and type the URL shown on the Home tab, or use the Nearby tab if the receiver is using the LocalShare app.", style = MaterialTheme.typography.bodyMedium)
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showHowToUseDialog = false }) {
-                    Text("Got it")
-                }
-            }
-        )
-    }
 
     var isVisible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { isVisible = true }
@@ -173,12 +144,14 @@ fun SettingsScreen(
 
     val categories = listOf(
         Triple("Appearance", "Theme, colors & visual style", Icons.Rounded.Brush),
-        Triple("Security", "PIN protection & access", Icons.Rounded.Lock),
         Triple("Device", "Name, connections & identity", Icons.Rounded.Devices),
+        Triple("Security", "PIN protection & access", Icons.Rounded.Lock),
         Triple("Storage", "Folder size, images & videos", Icons.Rounded.Storage),
+        Triple("How to Use", "Simple guide on using this app", Icons.AutoMirrored.Rounded.Help),
         Triple("Updates", "Release notes & bug fixes", Icons.Rounded.SystemUpdate),
-        Triple("About", "Version, developer & source", Icons.Rounded.Info),
-        Triple("How to Use", "Simple guide on using this app", Icons.AutoMirrored.Rounded.Help)
+        Triple("Report a Bug", "Report issues or request features", Icons.Rounded.BugReport),
+        Triple("Privacy Policy", "How we handle your data", Icons.Rounded.Security),
+        Triple("About", "Version, developer & source", Icons.Rounded.Info)
     )
 
     AnimatedContent(
@@ -202,8 +175,10 @@ fun SettingsScreen(
                 updateInfo = updateInfo,
                 onSelectCategory = { index ->
                     when (index) {
-                        5 -> onNavigateToAbout()
-                        6 -> showHowToUseDialog = true
+                        4 -> onNavigateToHowToUse()
+                        6 -> onNavigateToBugReport()
+                        7 -> onNavigateToPrivacyPolicy()
+                        8 -> onNavigateToAbout()
                         else -> selectedCategoryIndex = index
                     }
                 }
@@ -216,10 +191,10 @@ fun SettingsScreen(
             ) { paddingValues ->
                 when (categoryIndex) {
                     0 -> AppearanceContent(settings, viewModel, paddingValues)
-                    1 -> SecurityContent(settings, viewModel, paddingValues)
-                    2 -> DeviceContent(settings, viewModel, paddingValues)
+                    1 -> DeviceContent(settings, viewModel, paddingValues)
+                    2 -> SecurityContent(settings, viewModel, paddingValues)
                     3 -> StorageContent(paddingValues)
-                    4 -> UpdatesContent(viewModel, updateInfo, paddingValues)
+                    5 -> UpdatesContent(viewModel, updateInfo, paddingValues)
                 }
             }
         }
@@ -732,6 +707,57 @@ private fun SecurityContent(settings: com.localshare.app.data.AppSettings, viewM
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp, vertical = 16.dp)
     ) {
+        // Security Status Header
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = if (settings.pin != null || settings.encryptionEnabled)
+                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                else
+                    MaterialTheme.colorScheme.surfaceContainer
+            )
+        ) {
+            Row(
+                modifier = Modifier.padding(20.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Lock,
+                    contentDescription = null,
+                    tint = if (settings.pin != null || settings.encryptionEnabled)
+                        MaterialTheme.colorScheme.primary
+                    else
+                        MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(28.dp)
+                )
+                Spacer(modifier = Modifier.width(14.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = if (settings.pin != null || settings.encryptionEnabled) "Protected" else "Unprotected",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = if (settings.pin != null || settings.encryptionEnabled)
+                            MaterialTheme.colorScheme.primary
+                        else
+                            MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = buildString {
+                            if (settings.pin != null) append("PIN: ON")
+                            if (settings.pin != null && settings.encryptionEnabled) append("  |  ")
+                            if (settings.encryptionEnabled) append("Encryption: ON")
+                            if (isEmpty()) append("No security features enabled")
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
         SettingsCard {
             PinSetting(
                 currentPin = settings.pin,
@@ -741,6 +767,11 @@ private fun SecurityContent(settings: com.localshare.app.data.AppSettings, viewM
             EncryptionSetting(
                 enabled = settings.encryptionEnabled,
                 onToggle = { viewModel.setEncryptionEnabled(it) }
+            )
+            Spacer(modifier = Modifier.height(20.dp))
+            ClipboardSyncSetting(
+                enabled = settings.clipboardSyncEnabled,
+                onToggle = { viewModel.setClipboardSyncEnabled(it) }
             )
         }
         Spacer(modifier = Modifier.height(16.dp))
@@ -804,23 +835,27 @@ private fun shapeForIndex(index: Int, total: Int): RoundedCornerShape {
 private fun getCategoryColors(isDark: Boolean): List<Pair<Color, Color>> {
     return if (isDark) {
         listOf(
-            Color(0xFF7D5260) to Color(0xFFFFD8E4),
-            Color(0xFF633B48) to Color(0xFFFFD8EC),
-            Color(0xFF004A77) to Color(0xFFC2E7FF),
-            Color(0xFF3F474D) to Color(0xFFDEE3EB),
+            Color(0xFF7D5260) to Color(0xFFFFD8E4), // Appearance
+            Color(0xFF004A77) to Color(0xFFC2E7FF), // Device
+            Color(0xFF633B48) to Color(0xFFFFD8EC), // Security
+            Color(0xFF3F474D) to Color(0xFFDEE3EB), // Storage
+            Color(0xFF386A20) to Color(0xFFB7F397), // How to Use
             Color(0xFF4B3900) to Color(0xFFFFE082), // Updates
-            Color(0xFF3F474D) to Color(0xFFDEE3EB),
-            Color(0xFF386A20) to Color(0xFFB7F397)
+            Color(0xFF6B3A2A) to Color(0xFFFFCBA4), // Report a Bug
+            Color(0xFF2A4A6B) to Color(0xFFA4D4FF), // Privacy Policy
+            Color(0xFF3F474D) to Color(0xFFDEE3EB)  // About
         )
     } else {
         listOf(
-            Color(0xFFFFD8E4) to Color(0xFF631835),
-            Color(0xFFFFD8EC) to Color(0xFF631B4B),
-            Color(0xFFD7E3FF) to Color(0xFF005AC1),
-            Color(0xFFEFF1F7) to Color(0xFF44474F),
+            Color(0xFFFFD8E4) to Color(0xFF631835), // Appearance
+            Color(0xFFD7E3FF) to Color(0xFF005AC1), // Device
+            Color(0xFFFFD8EC) to Color(0xFF631B4B), // Security
+            Color(0xFFEFF1F7) to Color(0xFF44474F), // Storage
+            Color(0xFFB7F397) to Color(0xFF042100), // How to Use
             Color(0xFFFFE082) to Color(0xFF4B3900), // Updates
-            Color(0xFFEFF1F7) to Color(0xFF44474F),
-            Color(0xFFB7F397) to Color(0xFF042100)
+            Color(0xFFFFCBA4) to Color(0xFF6B3A2A), // Report a Bug
+            Color(0xFFA4D4FF) to Color(0xFF2A4A6B), // Privacy Policy
+            Color(0xFFEFF1F7) to Color(0xFF44474F)  // About
         )
     }
 }
@@ -1004,15 +1039,30 @@ private fun PinSetting(currentPin: String?, onPinChange: (String?) -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Column {
+        Column(modifier = Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "PIN Protection",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = if (isPinEnabled) Color(0xFF22C55E).copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant
+                ) {
+                    Text(
+                        text = if (isPinEnabled) "ON" else "OFF",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isPinEnabled) Color(0xFF22C55E) else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                    )
+                }
+            }
             Text(
-                text = "PIN Protection",
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = if (isPinEnabled) "Web UI is protected" else "Anyone can access",
+                text = if (isPinEnabled) "Web UI is protected with PIN" else "Anyone on the network can access",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -1255,35 +1305,156 @@ fun NearbyDiscoverySetting(enabled: Boolean, onToggle: (Boolean) -> Unit) {
 
 @Composable
 fun EncryptionSetting(enabled: Boolean, onToggle: (Boolean) -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = "E2E Encryption",
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = if (enabled) "Files are encrypted with AES-256-GCM" else "Encrypt file transfers with AES-256",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+    Column {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "E2E Encryption",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = if (enabled) Color(0xFF22C55E).copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant
+                    ) {
+                        Text(
+                            text = if (enabled) "ON" else "OFF",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = if (enabled) Color(0xFF22C55E) else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+                Text(
+                    text = if (enabled) "Files encrypted with AES-256-GCM" else "Encrypt file transfers end-to-end",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Switch(
+                checked = enabled,
+                onCheckedChange = onToggle,
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = MaterialTheme.colorScheme.primary,
+                    checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
+                    uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                    uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
+                )
             )
         }
-        Spacer(modifier = Modifier.width(16.dp))
-        Switch(
-            checked = enabled,
-            onCheckedChange = onToggle,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = MaterialTheme.colorScheme.primary,
-                checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
-                uncheckedThumbColor = MaterialTheme.colorScheme.outline,
-                uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
+
+        // Info text
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 12.dp),
+            shape = RoundedCornerShape(10.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh
+        ) {
+            Text(
+                text = if (enabled) {
+                    "Your files are encrypted before sending and decrypted on the other device. " +
+                    "Even if someone intercepts the transfer, they cannot read your files. " +
+                    "The encryption key is embedded in the URL automatically."
+                } else {
+                    "When enabled, every file transfer is encrypted with AES-256-GCM military-grade encryption. " +
+                    "Recommended when sharing sensitive files on public or shared networks. " +
+                    "No speed impact on home Wi-Fi."
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(12.dp)
             )
-        )
+        }
+    }
+}
+
+@Composable
+private fun ClipboardSyncSetting(enabled: Boolean, onToggle: (Boolean) -> Unit) {
+    val context = LocalContext.current
+
+    Column {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "Clipboard Sync",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = if (enabled) Color(0xFF22C55E).copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant
+                    ) {
+                        Text(
+                            text = if (enabled) "ON" else "OFF",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = if (enabled) Color(0xFF22C55E) else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+                Text(
+                    text = if (enabled) "Syncs clipboard to web UI" else "Share clipboard text between phone and laptop",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Switch(
+                checked = enabled,
+                onCheckedChange = {
+                    onToggle(it)
+                    val msg = if (it) "Clipboard sync enabled" else "Clipboard sync disabled"
+                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                },
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = MaterialTheme.colorScheme.primary,
+                    checkedTrackColor = MaterialTheme.colorScheme.primaryContainer,
+                    uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                    uncheckedTrackColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            )
+        }
+
+        // Info text
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 12.dp),
+            shape = RoundedCornerShape(10.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh
+        ) {
+            Text(
+                text = if (enabled) {
+                    "Your phone's clipboard text is shared with the web UI in real-time. " +
+                    "Copy text on your phone and it appears on the laptop instantly, and vice versa. " +
+                    "Note: Android may show a 'pasted from clipboard' notification."
+                } else {
+                    "When enabled, clipboard text is shared between your phone and any device " +
+                    "connected to the web UI. Copy a link on your phone and paste it on your laptop instantly."
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(12.dp)
+            )
+        }
     }
 }
 
@@ -1506,7 +1677,7 @@ fun UpdatesContent(
     paddingValues: PaddingValues
 ) {
     val context = LocalContext.current
-    var isChecking by remember { mutableStateOf(false) }
+    val updateStatus by viewModel.updateStatus.collectAsState()
 
     val currentVersion = remember {
         try {
@@ -1514,12 +1685,6 @@ fun UpdatesContent(
             pInfo.versionName ?: "1.0"
         } catch (e: Exception) {
             "1.0"
-        }
-    }
-
-    LaunchedEffect(updateInfo) {
-        if (updateInfo != null) {
-            isChecking = false
         }
     }
 
@@ -1551,65 +1716,118 @@ fun UpdatesContent(
         )
         Spacer(modifier = Modifier.height(32.dp))
 
-        if (updateInfo != null) {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text("New Version Available: ${updateInfo.version}", fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = updateInfo.description,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Button(
-                        onClick = {
-                            if (updateInfo.apkUrl != null) {
-                                com.localshare.app.util.UpdateManager.downloadAndInstallUpdate(context, updateInfo.apkUrl)
-                            } else {
-                                val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(updateInfo.releaseUrl))
-                                context.startActivity(intent)
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Download & Install Update")
+        when {
+            updateStatus == FileShareViewModel.UpdateStatus.UPDATE_AVAILABLE && updateInfo != null -> {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text("New Version Available: ${updateInfo.version}", fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = updateInfo.description,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(
+                            onClick = {
+                                if (updateInfo.apkUrl != null) {
+                                    com.localshare.app.util.UpdateManager.downloadAndInstallUpdate(context, updateInfo.apkUrl)
+                                } else {
+                                    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(updateInfo.releaseUrl))
+                                    context.startActivity(intent)
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Download & Install Update")
+                        }
                     }
                 }
             }
-        } else {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+            updateStatus == FileShareViewModel.UpdateStatus.UP_TO_DATE -> {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
                 ) {
-                    Text("You are on the latest version!", fontWeight = FontWeight.SemiBold)
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Button(
-                        onClick = {
-                            isChecking = true
-                            viewModel.checkForUpdates(currentVersion)
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        enabled = !isChecking
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        if (isChecking) {
-                            androidx.compose.material3.CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
-                                color = MaterialTheme.colorScheme.onPrimary,
-                                strokeWidth = 2.dp
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Checking...")
-                        } else {
-                            Text("Check for Updates")
+                        Icon(
+                            imageVector = Icons.Rounded.CheckCircle,
+                            contentDescription = null,
+                            tint = Color(0xFF22C55E),
+                            modifier = Modifier.size(48.dp)
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text("You're up to date!", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.titleMedium)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text("Version $currentVersion is the latest", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        OutlinedButton(
+                            onClick = { viewModel.checkForUpdates(currentVersion) },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Check Again")
+                        }
+                    }
+                }
+            }
+            updateStatus == FileShareViewModel.UpdateStatus.ERROR -> {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text("Check failed", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onErrorContainer)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text("Could not reach GitHub. Check your internet connection.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onErrorContainer)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(
+                            onClick = { viewModel.checkForUpdates(currentVersion) },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Retry")
+                        }
+                    }
+                }
+            }
+            else -> {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text("Check for updates", fontWeight = FontWeight.SemiBold)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(
+                            onClick = { viewModel.checkForUpdates(currentVersion) },
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = updateStatus != FileShareViewModel.UpdateStatus.CHECKING
+                        ) {
+                            if (updateStatus == FileShareViewModel.UpdateStatus.CHECKING) {
+                                androidx.compose.material3.CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    color = MaterialTheme.colorScheme.onPrimary,
+                                    strokeWidth = 2.dp
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Checking...")
+                            } else {
+                                Text("Check for Updates")
+                            }
                         }
                     }
                 }

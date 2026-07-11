@@ -7,12 +7,14 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.InsertDriveFile
 import androidx.compose.material.icons.filled.Close
@@ -119,6 +121,7 @@ fun SendScreen(
     val scope = rememberCoroutineScope()
     val fileRepository = remember { com.localshare.app.data.FileRepository(context) }
     val isRunning by viewModel.isServerRunning.collectAsState()
+    val serverUrl by viewModel.serverUrl.collectAsState()
 
     var isSending by remember { mutableStateOf(false) }
     var sendingDeviceIp by remember { mutableStateOf<String?>(null) }
@@ -164,7 +167,8 @@ fun SendScreen(
 
     Column(
         modifier = Modifier
-            .fillMaxSize()
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
             .padding(top = 16.dp)
     ) {
         // ─── Server Status Card ────────────────────────────────────────
@@ -181,48 +185,95 @@ fun SendScreen(
                 containerColor = MaterialTheme.colorScheme.surfaceContainer
             )
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Row(
                     modifier = Modifier
-                        .size(10.dp)
-                        .background(statusColor, CircleShape)
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = if (isRunning) "Server Running" else "Server Offline",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = statusColor,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = if (isRunning) "Ready to receive files" else "Tap to start sharing",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-                FilledTonalButton(
-                    onClick = { viewModel.toggleServer() },
-                    shape = RoundedCornerShape(12.dp),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                    interactionSource = interactionSource,
-                    modifier = Modifier.bounceScale(interactionSource),
-                    colors = ButtonDefaults.filledTonalButtonColors(
-                        containerColor = if (isRunning) redColor.copy(alpha = 0.15f) else MaterialTheme.colorScheme.primaryContainer,
-                        contentColor = if (isRunning) redColor else MaterialTheme.colorScheme.onPrimaryContainer
-                    )
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = if (isRunning) "Stop" else "Start",
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.labelMedium
+                    Box(
+                        modifier = Modifier
+                            .size(10.dp)
+                            .background(statusColor, CircleShape)
                     )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = if (isRunning) "Server Running" else "Server Offline",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = statusColor,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = if (isRunning) "Ready to receive files" else "Tap to start sharing",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                    FilledTonalButton(
+                        onClick = { viewModel.toggleServer() },
+                        shape = RoundedCornerShape(12.dp),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                        interactionSource = interactionSource,
+                        modifier = Modifier.bounceScale(interactionSource),
+                        colors = ButtonDefaults.filledTonalButtonColors(
+                            containerColor = if (isRunning) redColor.copy(alpha = 0.15f) else MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = if (isRunning) redColor else MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    ) {
+                        Text(
+                            text = if (isRunning) "Stop" else "Start",
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                    }
+                }
+
+                // Server URL (only when running)
+                AnimatedVisibility(visible = isRunning && serverUrl != null) {
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = serverUrl ?: "",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.weight(1f),
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            IconButton(
+                                onClick = {
+                                    val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                                    val clip = android.content.ClipData.newPlainText("URL", serverUrl ?: "")
+                                    clipboard.setPrimaryClip(clip)
+                                    android.widget.Toast.makeText(context, "URL copied!", android.widget.Toast.LENGTH_SHORT).show()
+                                },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    Icons.Filled.ContentCopy,
+                                    contentDescription = "Copy URL",
+                                    modifier = Modifier.size(16.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -394,18 +445,21 @@ fun SendScreen(
                     }
                 }
 
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = 24.dp),
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.padding(top = 8.dp)
                 ) {
-                    items(sharedFiles, key = { it.id }) { file ->
+                    Spacer(modifier = Modifier.width(12.dp))
+                    sharedFiles.forEach { file ->
                         FileChip(
                             file = file,
                             onRemove = { viewModel.removeSharedFile(it) },
                             onClick = { navController.navigate("file_preview/${it}") }
                         )
                     }
+                    Spacer(modifier = Modifier.width(12.dp))
                 }
                 Spacer(modifier = Modifier.height(24.dp))
             }
@@ -424,7 +478,7 @@ fun SendScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f),
+                    .heightIn(min = 200.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -442,7 +496,7 @@ fun SendScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Ensure the receiver is on the Receive screen\nand on the same Wi-Fi.",
+                        text = "Make sure the other device is on the same Wi-Fi.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.outline,
                         textAlign = TextAlign.Center
@@ -450,12 +504,13 @@ fun SendScreen(
                 }
             }
         } else {
-            LazyColumn(
-                contentPadding = PaddingValues(horizontal = 24.dp, vertical = 8.dp),
+            Column(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 8.dp)
             ) {
-                items(devices, key = { it.ip }) { device ->
+                devices.forEach { device ->
                     val isThisDeviceSending = isSending && sendingDeviceIp == device.ip
                     DeviceCard(device = device, isSending = isThisDeviceSending) {
                         if (sharedFiles.isEmpty()) {
@@ -473,11 +528,11 @@ fun SendScreen(
                             )
                             isSending = false
                             sendingDeviceIp = null
-                            android.widget.Toast.makeText(context, "Transfer started! Check Activity tab.", android.widget.Toast.LENGTH_SHORT).show()
+                            android.widget.Toast.makeText(context, "Transfer started! Check History tab.", android.widget.Toast.LENGTH_SHORT).show()
                         }
                     }
                 }
-                item { Spacer(modifier = Modifier.height(100.dp)) }
+                Spacer(modifier = Modifier.height(100.dp))
             }
         }
     }
@@ -532,14 +587,14 @@ fun SendScreen(
 @Composable
 fun FileChip(file: SharedFile, onRemove: (Long) -> Unit, onClick: (Long) -> Unit) {
     Surface(
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surfaceVariant,
         modifier = Modifier
-            .width(140.dp)
+            .width(180.dp)
             .clickable { onClick(file.id) }
     ) {
         Row(
-            modifier = Modifier.padding(8.dp),
+            modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             val isMedia = file.category == com.localshare.app.data.FileCategory.PHOTOS || file.category == com.localshare.app.data.FileCategory.VIDEOS
@@ -548,29 +603,44 @@ fun FileChip(file: SharedFile, onRemove: (Long) -> Unit, onClick: (Long) -> Unit
                     model = file.uri,
                     contentDescription = null,
                     modifier = Modifier
-                        .size(24.dp)
-                        .clip(RoundedCornerShape(4.dp)),
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(8.dp)),
                     contentScale = ContentScale.Crop
                 )
             } else {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Rounded.InsertDriveFile,
-                    contentDescription = null,
-                    modifier = Modifier.size(24.dp),
-                    tint = MaterialTheme.colorScheme.primary
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Rounded.InsertDriveFile,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.width(10.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = file.name,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                )
+                Text(
+                    text = file.formattedSize,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = file.name,
-                style = MaterialTheme.typography.bodySmall,
-                maxLines = 1,
-                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f)
-            )
             IconButton(
                 onClick = { onRemove(file.id) },
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(28.dp)
             ) {
                 Icon(Icons.Filled.Close, contentDescription = "Remove", modifier = Modifier.size(16.dp))
             }

@@ -50,7 +50,7 @@ class SettingsRepository(private val context: Context) {
     /**
      * Load settings from DataStore. Auto-generates device name on first run.
      */
-    fun load(): AppSettings = runBlocking {
+    suspend fun load(): AppSettings {
         val prefs = context.dataStore.data.first()
 
         val themeName = prefs[KEY_THEME_MODE] ?: ThemeMode.SYSTEM.name
@@ -67,7 +67,7 @@ class SettingsRepository(private val context: Context) {
         val onboardingCompleted = prefs[KEY_ONBOARDING_COMPLETED] ?: false
         val encryptionEnabled = prefs[KEY_ENCRYPTION_ENABLED] ?: false
 
-        AppSettings(
+        return AppSettings(
             themeMode = try { ThemeMode.valueOf(themeName) } catch (_: Exception) { ThemeMode.SYSTEM },
             colorPalette = try { ColorPalette.valueOf(paletteName) } catch (_: Exception) { ColorPalette.SYSTEM },
             themeColorSeed = themeColorSeed,
@@ -85,7 +85,7 @@ class SettingsRepository(private val context: Context) {
     /**
      * Save all settings to DataStore.
      */
-    fun save(settings: AppSettings) = runBlocking {
+    suspend fun save(settings: AppSettings) {
         context.dataStore.edit { prefs ->
             prefs[KEY_THEME_MODE] = settings.themeMode.name
             prefs[KEY_COLOR_PALETTE] = settings.colorPalette.name

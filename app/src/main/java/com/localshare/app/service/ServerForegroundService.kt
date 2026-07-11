@@ -237,6 +237,9 @@ class ServerForegroundService : Service() {
             _isRunning.value = true
             _serverUrl.value = url
 
+            // Update widget
+            try { com.localshare.app.widget.ServerStatusWidget.updateAllWidgets(this) } catch (_: Exception) {}
+
             if (_enableNearbyDiscovery) {
                 // Register mDNS so the server is reachable at localshare.local
                 com.localshare.app.util.NsdHelper.register(this, currentPort, _deviceName)
@@ -272,6 +275,7 @@ class ServerForegroundService : Service() {
             startForeground(NOTIFICATION_ID, errorNotification)
             
             _isRunning.value = false
+            try { com.localshare.app.widget.ServerStatusWidget.updateAllWidgets(this) } catch (_: Exception) {}
             stopSelf()
         }
     }
@@ -287,6 +291,9 @@ class ServerForegroundService : Service() {
         _isRunning.value = false
         _serverUrl.value = null
         _connectedDeviceCount.value = 0
+
+        // Update widget
+        try { com.localshare.app.widget.ServerStatusWidget.updateAllWidgets(this) } catch (_: Exception) {}
 
         // Unregister mDNS service
         com.localshare.app.util.NsdHelper.unregister()

@@ -1,8 +1,8 @@
 import styles from "./page.module.css";
+import Link from "next/link";
 
-// SVG Components
 const DownloadIcon = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
     <polyline points="7 10 12 15 17 10"></polyline>
     <line x1="12" y1="15" x2="12" y2="3"></line>
@@ -10,8 +10,15 @@ const DownloadIcon = () => (
 );
 
 const GithubIcon = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+  </svg>
+);
+
+const PhoneIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+    <line x1="12" y1="18" x2="12.01" y2="18"></line>
   </svg>
 );
 
@@ -45,57 +52,120 @@ const DesignIcon = () => (
   </svg>
 );
 
+const ShieldIcon = () => (
+  <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+  </svg>
+);
+
 export default function Home() {
   return (
     <div className={styles.container}>
+      {/* NAVIGATION */}
+      <nav className={styles.nav}>
+        <div className={styles.navInner}>
+          <Link href="/" className={styles.navLogo}>
+            <span className={styles.navLogoIcon}>LS</span>
+            <span>LocalShare</span>
+          </Link>
+          <div className={styles.navLinks}>
+            <a href="#features">Features</a>
+            <a href="#how-it-works">How It Works</a>
+            <Link href="/privacy">Privacy</Link>
+            <a href="https://github.com/Kaifazad/LocalShare" target="_blank" rel="noopener noreferrer">GitHub</a>
+          </div>
+        </div>
+      </nav>
+
       <main className={styles.main}>
-        
+
         {/* HERO SECTION */}
         <section className={styles.hero}>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 600, color: 'var(--accent-blue)', marginBottom: '1rem', letterSpacing: '0.1em', textTransform: 'uppercase' }}>LOCALSHARE</h2>
+          <div className={styles.heroBadge}>100% Free &amp; Open Source</div>
           <h1>
-            AirDrop for Everything.<br />
-          <span className="gradient-text" style={{ color: 'var(--foreground)' }}>Completely Offline.</span>
+            Share Files.<br />
+            <span className={styles.heroHighlight}>Completely Offline.</span>
           </h1>
-          <p>
-            A beautifully crafted, blazing-fast, and deeply integrated offline file sharing app for Android. Share gigabytes of data in seconds without an internet connection.
+          <p className={styles.heroSubtitle}>
+            A blazing-fast, beautifully crafted file sharing app for Android. Share photos, videos, documents, and entire folders with any device on your network &mdash; no internet required.
           </p>
           <div className={styles.buttonGroup}>
             <a href="https://github.com/Kaifazad/LocalShare/releases/latest" target="_blank" rel="noopener noreferrer" className={styles.ctaButton}>
-              <DownloadIcon /> Download Latest APK
+              <DownloadIcon /> Download APK
             </a>
             <a href="https://github.com/Kaifazad/LocalShare" target="_blank" rel="noopener noreferrer" className={styles.secondaryButton}>
-              <GithubIcon /> View on GitHub
+              <GithubIcon /> View Source
             </a>
+          </div>
+          <div className={styles.heroVisual}>
+            <div className={styles.heroPhone}>
+              <div className={styles.heroPhoneScreen}>
+                <div className={styles.heroPhoneHeader}>
+                  <div className={styles.heroPhoneDot}></div>
+                  <span>LocalShare</span>
+                </div>
+                <div className={styles.heroPhoneContent}>
+                  <div className={styles.heroPhoneStatus}>
+                    <div className={styles.heroPhoneStatusDot}></div>
+                    Server Running
+                  </div>
+                  <div className={styles.heroPhoneUrl}>192.168.1.5:8080</div>
+                  <div className={styles.heroPhoneFiles}>
+                    <div className={styles.heroPhoneFile}>
+                      <span>vacation.mp4</span><span>245 MB</span>
+                    </div>
+                    <div className={styles.heroPhoneFile}>
+                      <span>photo.jpg</span><span>3.2 MB</span>
+                    </div>
+                    <div className={styles.heroPhoneFile}>
+                      <span>document.pdf</span><span>1.1 MB</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 
         {/* FEATURES GRID */}
-        <section className={styles.features}>
-          <div className="surface-card">
-            <div className={styles.featureIcon}><SpeedIcon /></div>
-            <h3 className={styles.featureTitle}>Blazing Fast</h3>
-            <p className={styles.featureDesc}>Transfers files using a direct local hotspot connection, maximizing speed without relying on external internet routing.</p>
-          </div>
-          <div className="surface-card">
-            <div className={styles.featureIcon}><WebIcon /></div>
-            <h3 className={styles.featureTitle}>Cross-Platform Web UI</h3>
-            <p className={styles.featureDesc}>Don't have the app on your laptop? Just open a browser. LocalShare serves a beautiful web UI for any device to connect seamlessly.</p>
-          </div>
-          <div className="surface-card">
-            <div className={styles.featureIcon}><SecureIcon /></div>
-            <h3 className={styles.featureTitle}>Secure by Design</h3>
-            <p className={styles.featureDesc}>All file transfers are protected with dynamic PIN authentication and localized entirely to your physical environment.</p>
-          </div>
-          <div className="surface-card">
-            <div className={styles.featureIcon}><DesignIcon /></div>
-            <h3 className={styles.featureTitle}>Material 3 Aesthetics</h3>
-            <p className={styles.featureDesc}>Built purely with Jetpack Compose, featuring a stunning glassmorphic UI, fluid animations, and dynamic colors.</p>
+        <section id="features" className={styles.features}>
+          <h2 className={styles.sectionTitle}>Why LocalShare?</h2>
+          <div className={styles.featuresGrid}>
+            <div className={`${styles.featureCard} surface-card`}>
+              <div className={`${styles.featureIcon} ${styles.featureIconBlue}`}><SpeedIcon /></div>
+              <h3 className={styles.featureTitle}>Blazing Fast</h3>
+              <p className={styles.featureDesc}>Transfer gigabytes in seconds. Uses direct local Wi-Fi or hotspot connections for maximum speed.</p>
+            </div>
+            <div className={`${styles.featureCard} surface-card`}>
+              <div className={`${styles.featureIcon} ${styles.featureIconGreen}`}><WebIcon /></div>
+              <h3 className={styles.featureTitle}>Cross-Platform Web UI</h3>
+              <p className={styles.featureDesc}>No app needed on the other device. Just open a browser and connect. Works on laptops, iPhones, tablets, and more.</p>
+            </div>
+            <div className={`${styles.featureCard} surface-card`}>
+              <div className={`${styles.featureIcon} ${styles.featureIconPurple}`}><SecureIcon /></div>
+              <h3 className={styles.featureTitle}>PIN Protected</h3>
+              <p className={styles.featureDesc}>Optional PIN authentication keeps your files secure. Only devices with the PIN can access shared content.</p>
+            </div>
+            <div className={`${styles.featureCard} surface-card`}>
+              <div className={`${styles.featureIcon} ${styles.featureIconOrange}`}><ShieldIcon /></div>
+              <h3 className={styles.featureTitle}>Encrypted Transfers</h3>
+              <p className={styles.featureDesc}>Optional AES-256-GCM encryption for end-to-end secure file transfers. Your data never leaves your network.</p>
+            </div>
+            <div className={`${styles.featureCard} surface-card`}>
+              <div className={`${styles.featureIcon} ${styles.featureIconPink}`}><PhoneIcon /></div>
+              <h3 className={styles.featureTitle}>Share Anything</h3>
+              <p className={styles.featureDesc}>Photos, videos, audio, documents, APKs, folders, and even clipboard text. Share it all with a few taps.</p>
+            </div>
+            <div className={`${styles.featureCard} surface-card`}>
+              <div className={`${styles.featureIcon} ${styles.featureIconTeal}`}><DesignIcon /></div>
+              <h3 className={styles.featureTitle}>Beautiful Design</h3>
+              <p className={styles.featureDesc}>Built with Jetpack Compose and Material 3. Multiple themes, dark mode, and a stunning glassmorphic web UI.</p>
+            </div>
           </div>
         </section>
 
         {/* HOW IT WORKS */}
-        <section className={styles.howItWorks}>
+        <section id="how-it-works" className={styles.howItWorks}>
           <h2 className={styles.sectionTitle}>How It Works</h2>
           <div className={styles.stepsGrid}>
             <div className={`${styles.stepCard} surface-card`}>
@@ -103,7 +173,7 @@ export default function Home() {
               <div className={styles.stepContent}>
                 <h3 className={styles.featureTitle}>Start the Server</h3>
                 <p className={styles.featureDesc}>
-                  Open LocalShare on your Android device and tap "Start". The app instantly spins up a secure local HTTP server on your phone and automatically manages your WiFi Hotspot to prepare for incoming connections.
+                  Open LocalShare and tap Start. The app spins up a secure local HTTP server and shows you a URL and QR code.
                 </p>
               </div>
             </div>
@@ -112,16 +182,16 @@ export default function Home() {
               <div className={styles.stepContent}>
                 <h3 className={styles.featureTitle}>Connect Any Device</h3>
                 <p className={styles.featureDesc}>
-                  Connect your laptop, iPhone, or another Android to the generated Hotspot. Then, either scan the provided QR Code or type the local IP address into your favorite web browser. No installation required on the receiving device!
+                  Connect to the same Wi-Fi or hotspot, then open the URL in any browser. No app install needed on the receiving device.
                 </p>
               </div>
             </div>
             <div className={`${styles.stepCard} surface-card`}>
               <span className={styles.stepNumber}>3</span>
               <div className={styles.stepContent}>
-                <h3 className={styles.featureTitle}>Transfer & Authenticate</h3>
+                <h3 className={styles.featureTitle}>Transfer Files</h3>
                 <p className={styles.featureDesc}>
-                  Select the files you want to share. The receiving device will be prompted to enter a secure, auto-generated PIN to authorize the transfer. Once authorized, files stream at maximum local network speeds!
+                  Browse, preview, and download shared files. Or upload files from the browser back to your phone. It&apos;s that simple.
                 </p>
               </div>
             </div>
@@ -130,24 +200,35 @@ export default function Home() {
 
         {/* OPEN SOURCE SECTION */}
         <section className={styles.openSource}>
-          <h2 className={styles.sectionTitle}>100% Free & Open Source</h2>
-          <p>
-            LocalShare is built for the community, by the community. There are no ads, no trackers, and no hidden subscriptions. The entire source code is available under the MIT License.
-          </p>
-          <a href="https://github.com/Kaifazad/LocalShare/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer" className={styles.secondaryButton}>
-            Become a Contributor
-          </a>
+          <div className={`${styles.openSourceCard} surface-card`}>
+            <h2 className={styles.sectionTitle}>100% Free &amp; Open Source</h2>
+            <p>
+              No ads, no trackers, no hidden subscriptions. LocalShare is built for the community, by the community. The entire source code is available under the MIT License.
+            </p>
+            <div className={styles.buttonGroup} style={{ justifyContent: "center" }}>
+              <a href="https://github.com/Kaifazad/LocalShare" target="_blank" rel="noopener noreferrer" className={styles.secondaryButton}>
+                <GithubIcon /> View on GitHub
+              </a>
+              <a href="https://github.com/Kaifazad/LocalShare/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer" className={styles.secondaryButton}>
+                Become a Contributor
+              </a>
+            </div>
+          </div>
         </section>
 
       </main>
 
       {/* FOOTER */}
       <footer className={styles.footer}>
-        <div className={styles.footerLinks}>
-          <a href="https://github.com/Kaifazad/LocalShare" target="_blank" rel="noopener noreferrer">GitHub Source</a>
-          <a href="https://github.com/Kaifazad/LocalShare/issues/new/choose" target="_blank" rel="noopener noreferrer">Report a Bug / Request Feature</a>
+        <div className={styles.footerInner}>
+          <div className={styles.footerLinks}>
+            <a href="https://github.com/Kaifazad/LocalShare" target="_blank" rel="noopener noreferrer">GitHub</a>
+            <a href="https://github.com/Kaifazad/LocalShare/issues/new/choose" target="_blank" rel="noopener noreferrer">Report a Bug</a>
+            <Link href="/privacy">Privacy Policy</Link>
+            <a href="https://github.com/Kaifazad/LocalShare/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">Contributing</a>
+          </div>
+          <p>&copy; {new Date().getFullYear()} Developed by <a href="https://kaifazad.in" target="_blank" rel="noopener noreferrer" style={{textDecoration: 'underline', color: 'var(--foreground)'}}>Kaif Azad</a>. Open Source under the MIT License.</p>
         </div>
-        <p>© {new Date().getFullYear()} Developed by <a href="https://kaifazad.in" target="_blank" rel="noopener noreferrer" style={{textDecoration: 'underline', color: 'var(--foreground)'}}>Kaif Azad</a>. Open Source under the MIT License.</p>
       </footer>
     </div>
   );

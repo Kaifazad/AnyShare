@@ -39,14 +39,21 @@ class DiscoveryBroadcaster(private val context: Context) {
 
             var socket: MulticastSocket? = null
             try {
-                socket = MulticastSocket()
+                // Bind to the correct network interface (handles hotspot/tethering)
+                val localIp = NetworkUtils.getLocalIpAddress(context)
+                if (localIp == null || localIp == "0.0.0.0") {
+                    Log.e(TAG, "Cannot determine local IP, aborting broadcast")
+                    return@launch
+                }
+                val bindAddr = java.net.InetSocketAddress(localIp, 0)
+                socket = MulticastSocket(bindAddr)
                 socket.timeToLive = 1 // Local network only
-                
+
                 val groupAddress = InetAddress.getByName(MULTICAST_GROUP)
 
                 while (isActive) {
                     val ip = NetworkUtils.getLocalIpAddress(context) ?: "0.0.0.0"
-                    
+
                     val payload = JSONObject().apply {
                         put("app", "LocalShare")
                         put("alias", alias)
