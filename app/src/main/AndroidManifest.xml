@@ -102,6 +102,13 @@
             </intent-filter>
         </receiver>
 
+        <!-- Widget Copy Receiver -->
+        <receiver android:name=".widget.WidgetCopyReceiver" android:exported="false">
+            <intent-filter>
+                <action android:name="com.localshare.app.ACTION_COPY_URL" />
+            </intent-filter>
+        </receiver>
+
     </application>
 
 </manifest>
