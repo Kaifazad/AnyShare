@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.SignalWifiOff
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.rounded.Computer
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Image
@@ -598,15 +599,36 @@ fun FileChip(file: SharedFile, onRemove: (Long) -> Unit, onClick: (Long) -> Unit
             verticalAlignment = Alignment.CenterVertically
         ) {
             val isMedia = file.category == com.localshare.app.data.FileCategory.PHOTOS || file.category == com.localshare.app.data.FileCategory.VIDEOS
+            val isVideo = file.category == com.localshare.app.data.FileCategory.VIDEOS
             if (isMedia) {
-                coil.compose.AsyncImage(
-                    model = file.uri,
-                    contentDescription = null,
+                Box(
                     modifier = Modifier
                         .size(40.dp)
-                        .clip(RoundedCornerShape(8.dp)),
-                    contentScale = ContentScale.Crop
-                )
+                        .clip(RoundedCornerShape(8.dp))
+                ) {
+                    coil.compose.AsyncImage(
+                        model = file.uri,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                    // Play button overlay for videos
+                    if (isVideo) {
+                        Surface(
+                            modifier = Modifier.fillMaxSize(),
+                            color = Color.Black.copy(alpha = 0.4f)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Filled.PlayArrow,
+                                    contentDescription = "Play",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                    }
+                }
             } else {
                 Surface(
                     shape = RoundedCornerShape(8.dp),

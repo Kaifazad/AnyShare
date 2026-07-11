@@ -6,7 +6,6 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.view.View
 import android.widget.RemoteViews
 import com.localshare.app.R
 import com.localshare.app.service.ServerForegroundService
@@ -14,19 +13,16 @@ import com.localshare.app.service.ServerForegroundService
 class ServerStatusWidget : AppWidgetProvider() {
 
     companion object {
-        private const val ACTION_TOGGLE_SERVER = "com.localshare.app.ACTION_TOGGLE_SERVER"
-        private const val ACTION_COPY_URL = "com.localshare.app.ACTION_COPY_URL"
+        private const val ACTION_TOGGLE = "com.localshare.app.WIDGET_TOGGLE"
 
         fun updateAllWidgets(context: Context) {
             try {
-                val appWidgetManager = AppWidgetManager.getInstance(context)
-                val widgetIds = appWidgetManager.getAppWidgetIds(
-                    ComponentName(context, ServerStatusWidget::class.java)
-                )
-                if (widgetIds.isNotEmpty()) {
+                val mgr = AppWidgetManager.getInstance(context)
+                val ids = mgr.getAppWidgetIds(ComponentName(context, ServerStatusWidget::class.java))
+                if (ids.isNotEmpty()) {
                     val intent = Intent(context, ServerStatusWidget::class.java).apply {
                         action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
-                        putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, widgetIds)
+                        putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids)
                     }
                     context.sendBroadcast(intent)
                 }
@@ -34,20 +30,13 @@ class ServerStatusWidget : AppWidgetProvider() {
         }
     }
 
-    override fun onUpdate(
-        context: Context,
-        appWidgetManager: AppWidgetManager,
-        appWidgetIds: IntArray
-    ) {
-        for (widgetId in appWidgetIds) {
-            updateAppWidget(context, appWidgetManager, widgetId)
-        }
+    override fun onUpdate(context: Context, mgr: AppWidgetManager, ids: IntArray) {
+        for (id in ids) updateOne(context, mgr, id)
     }
 
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
-
-        if (intent.action == ACTION_TOGGLE_SERVER) {
+        if (intent.action == ACTION_TOGGLE) {
             try {
                 if (ServerForegroundService.isRunning.value) {
                     ServerForegroundService.stop(context)
@@ -55,94 +44,50 @@ class ServerStatusWidget : AppWidgetProvider() {
                     ServerForegroundService.start(context)
                 }
             } catch (_: Exception) {}
-
+            updateAllWidgets(context)
             android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                 updateAllWidgets(context)
-            }, 600)
+            }, 700)
         }
     }
 
-    private fun updateAppWidget(
-        context: Context,
-        appWidgetManager: AppWidgetManager,
-        widgetId: Int
-    ) {
+    private fun updateOne(context: Context, mgr: AppWidgetManager, id: Int) {
         try {
             val views = RemoteViews(context.packageName, R.layout.widget_server_status)
+            val running = try { ServerForegroundService.isRunning.value } catch (_: Exception) { false }
+            val url = try { ServerForegroundService.serverUrl.value } catch (_: Exception) { null }
 
-            val isRunning = try {
-                ServerForegroundService.isRunning.value
-            } catch (_: Exception) {
-                false
-            }
-
-            val serverUrl = try {
-                ServerForegroundService.serverUrl.value
-            } catch (_: Exception) {
-                null
-            }
-
-            // Status dot
-            views.setImageViewResource(
-                R.id.status_indicator,
-                if (isRunning) R.drawable.widget_status_dot_online
-                else R.drawable.widget_status_dot_offline
-            )
+            // Circle: green when running, red when stopped
+            views.setImageViewResource(R.id.status_indicator,
+                if (running) R.drawable.widget_status_circle else R.drawable.widget_status_circle_offline)
 
             // Status text
-            views.setTextViewText(
-                R.id.status_text,
-                if (isRunning) "Server running" else "Tap to start"
-            )
+            views.setTextViewText(R.id.status_text,
+                if (running && url != null) url else if (running) "Starting..." else "Offline")
 
-            // Toggle icon
-            views.setImageViewResource(
-                R.id.toggle_button,
-                if (isRunning) R.drawable.widget_toggle_stop
-                else R.drawable.widget_toggle_play
-            )
+            // Button icon
+            views.setImageViewResource(R.id.toggle_button,
+                if (running) R.drawable.widget_toggle_stop else R.drawable.widget_toggle_play)
 
-            // URL row visibility
-            if (isRunning && serverUrl != null) {
-                views.setViewVisibility(R.id.url_row, View.VISIBLE)
-                views.setTextViewText(R.id.url_text, serverUrl)
-            } else {
-                views.setViewVisibility(R.id.url_row, View.GONE)
-            }
+            // Button background: slightly brighter when running
+            views.setImageViewResource(R.id.toggle_button,
+                if (running) R.drawable.widget_toggle_stop else R.drawable.widget_toggle_play)
 
-            // Toggle button click
-            val toggleIntent = Intent(context, ServerStatusWidget::class.java).apply {
-                action = ACTION_TOGGLE_SERVER
-            }
-            val togglePending = PendingIntent.getBroadcast(
-                context, 0, toggleIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-            views.setOnClickPendingIntent(R.id.toggle_button, togglePending)
+            val toggle = PendingIntent.getBroadcast(context, 0,
+                Intent(context, ServerStatusWidget::class.java).apply { action = ACTION_TOGGLE },
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+            views.setOnClickPendingIntent(R.id.toggle_button, toggle)
+            views.setOnClickPendingIntent(R.id.widget_container, toggle)
 
-            // Copy button click
-            val copyIntent = Intent(context, WidgetCopyReceiver::class.java).apply {
-                action = ACTION_COPY_URL
-            }
-            val copyPending = PendingIntent.getBroadcast(
-                context, 2, copyIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-            views.setOnClickPendingIntent(R.id.copy_button, copyPending)
+            val launch = PendingIntent.getActivity(context, 1,
+                Intent(context, com.localshare.app.ui.FileShareActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                },
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+            views.setOnClickPendingIntent(R.id.app_title, launch)
+            views.setOnClickPendingIntent(R.id.status_text, launch)
 
-            // Tap container to toggle
-            views.setOnClickPendingIntent(R.id.widget_container, togglePending)
-
-            // Tap app name to open app
-            val launchIntent = Intent(context, com.localshare.app.ui.FileShareActivity::class.java)
-            launchIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            val launchPending = PendingIntent.getActivity(
-                context, 1, launchIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-            views.setOnClickPendingIntent(R.id.app_title, launchPending)
-
-            appWidgetManager.updateAppWidget(widgetId, views)
+            mgr.updateAppWidget(id, views)
         } catch (_: Exception) {}
     }
 }

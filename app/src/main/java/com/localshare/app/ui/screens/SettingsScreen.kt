@@ -52,6 +52,8 @@ import androidx.compose.material.icons.rounded.Storage
 import androidx.compose.material.icons.rounded.Videocam
 import androidx.compose.material.icons.rounded.Devices
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.automirrored.rounded.Help
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.BugReport
@@ -147,6 +149,7 @@ fun SettingsScreen(
         Triple("Device", "Name, connections & identity", Icons.Rounded.Devices),
         Triple("Security", "PIN protection & access", Icons.Rounded.Lock),
         Triple("Storage", "Folder size, images & videos", Icons.Rounded.Storage),
+        Triple("Widget", "Add home screen widget", Icons.Rounded.FolderOpen),
         Triple("How to Use", "Simple guide on using this app", Icons.AutoMirrored.Rounded.Help),
         Triple("Updates", "Release notes & bug fixes", Icons.Rounded.SystemUpdate),
         Triple("Report a Bug", "Report issues or request features", Icons.Rounded.BugReport),
@@ -175,10 +178,10 @@ fun SettingsScreen(
                 updateInfo = updateInfo,
                 onSelectCategory = { index ->
                     when (index) {
-                        4 -> onNavigateToHowToUse()
-                        6 -> onNavigateToBugReport()
-                        7 -> onNavigateToPrivacyPolicy()
-                        8 -> onNavigateToAbout()
+                        5 -> onNavigateToHowToUse()
+                        7 -> onNavigateToBugReport()
+                        8 -> onNavigateToPrivacyPolicy()
+                        9 -> onNavigateToAbout()
                         else -> selectedCategoryIndex = index
                     }
                 }
@@ -194,7 +197,8 @@ fun SettingsScreen(
                     1 -> DeviceContent(settings, viewModel, paddingValues)
                     2 -> SecurityContent(settings, viewModel, paddingValues)
                     3 -> StorageContent(paddingValues)
-                    5 -> UpdatesContent(viewModel, updateInfo, paddingValues)
+                    4 -> WidgetInfoContent(paddingValues)
+                    6 -> UpdatesContent(viewModel, updateInfo, paddingValues)
                 }
             }
         }
@@ -839,6 +843,7 @@ private fun getCategoryColors(isDark: Boolean): List<Pair<Color, Color>> {
             Color(0xFF004A77) to Color(0xFFC2E7FF), // Device
             Color(0xFF633B48) to Color(0xFFFFD8EC), // Security
             Color(0xFF3F474D) to Color(0xFFDEE3EB), // Storage
+            Color(0xFF2A4A6B) to Color(0xFFA4D4FF), // Widget
             Color(0xFF386A20) to Color(0xFFB7F397), // How to Use
             Color(0xFF4B3900) to Color(0xFFFFE082), // Updates
             Color(0xFF6B3A2A) to Color(0xFFFFCBA4), // Report a Bug
@@ -851,6 +856,7 @@ private fun getCategoryColors(isDark: Boolean): List<Pair<Color, Color>> {
             Color(0xFFD7E3FF) to Color(0xFF005AC1), // Device
             Color(0xFFFFD8EC) to Color(0xFF631B4B), // Security
             Color(0xFFEFF1F7) to Color(0xFF44474F), // Storage
+            Color(0xFFA4D4FF) to Color(0xFF2A4A6B), // Widget
             Color(0xFFB7F397) to Color(0xFF042100), // How to Use
             Color(0xFFFFE082) to Color(0xFF4B3900), // Updates
             Color(0xFFFFCBA4) to Color(0xFF6B3A2A), // Report a Bug
@@ -1667,6 +1673,102 @@ private fun StorageStatItem(icon: ImageVector, label: String, count: Int, color:
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+    }
+}
+
+@Composable
+fun WidgetInfoContent(paddingValues: PaddingValues) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(paddingValues)
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Text(
+            text = "Home Screen Widget",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            text = "Add the LocalShare widget to your home screen for quick access.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        // Widget Preview
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF1A1A2E))
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(20.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(shape = CircleShape, color = Color(0xFF22C55E), modifier = Modifier.size(44.dp)) {}
+                Spacer(modifier = Modifier.width(14.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("LocalShare", color = Color.White, fontWeight = FontWeight.Bold)
+                    Text("http://192.168.x.x:8080", color = Color(0xFF888888), style = MaterialTheme.typography.bodySmall)
+                }
+                Surface(shape = CircleShape, color = Color(0xFF252540), modifier = Modifier.size(48.dp)) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(Icons.Rounded.PlayArrow, null, tint = Color.White, modifier = Modifier.size(24.dp))
+                    }
+                }
+            }
+        }
+
+        // How to add
+        Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
+            Column(modifier = Modifier.padding(20.dp)) {
+                Text("How to add the widget", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(12.dp))
+                StepItem("1", "Long-press on your home screen")
+                StepItem("2", "Tap \"Widgets\" in the menu")
+                StepItem("3", "Find \"LocalShare\" in the widget list")
+                StepItem("4", "Drag it to your home screen")
+            }
+        }
+
+        // Features
+        Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
+            Column(modifier = Modifier.padding(20.dp)) {
+                Text("What the widget does", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(12.dp))
+                FeatureItem(Icons.Rounded.PlayArrow, "Start/Stop Server", "Tap the button to toggle the server")
+                FeatureItem(Icons.Rounded.ContentCopy, "Quick URL Access", "See the server URL at a glance")
+                FeatureItem(Icons.Rounded.Info, "Status at a Glance", "Green dot = online, Red dot = offline")
+            }
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+    }
+}
+
+@Composable
+private fun StepItem(number: String, text: String) {
+    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer, modifier = Modifier.size(28.dp)) {
+            Box(contentAlignment = Alignment.Center) {
+                Text(number, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+            }
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+    }
+}
+
+@Composable
+private fun FeatureItem(icon: ImageVector, title: String, description: String) {
+    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.Top) {
+        Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+            Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }
 

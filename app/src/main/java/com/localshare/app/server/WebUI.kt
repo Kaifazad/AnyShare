@@ -1262,7 +1262,7 @@ function bootApp() {
       return;
     }
 
-    const STREAMABLE = new Set(['mp4','webm','mov','ogg','mp3','m4a','wav','aac','flac','jpg','jpeg','png','gif','webp']);
+    const STREAMABLE = new Set(['mp4','webm','mov','mkv','avi','m4v','ts','3gp','flv','wmv','ogg','mp3','m4a','wav','aac','flac','wma','jpg','jpeg','png','gif','webp','bmp','svg']);
 
     grid.innerHTML = files.map(f => {
       const ext    = f.name.split('.').pop().toLowerCase();
