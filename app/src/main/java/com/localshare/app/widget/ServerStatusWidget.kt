@@ -46,7 +46,6 @@ class ServerStatusWidget : AppWidgetProvider() {
         super.onReceive(context, intent)
 
         if (intent.action == ACTION_TOGGLE_SERVER) {
-            // Use Intent to start/stop service directly — this works even if app is in background
             try {
                 if (ServerForegroundService.isRunning.value) {
                     ServerForegroundService.stop(context)
@@ -55,10 +54,10 @@ class ServerStatusWidget : AppWidgetProvider() {
                 }
             } catch (_: Exception) {}
 
-            // Delay widget update to let service state change propagate
+            // Delay widget update to let service state change
             android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                 updateAllWidgets(context)
-            }, 500)
+            }, 600)
         }
     }
 
@@ -76,42 +75,48 @@ class ServerStatusWidget : AppWidgetProvider() {
                 false
             }
 
+            // Update status dot
             views.setImageViewResource(
                 R.id.status_indicator,
                 if (isRunning) R.drawable.widget_status_dot_online
                 else R.drawable.widget_status_dot_offline
             )
 
+            // Update status text
             views.setTextViewText(
                 R.id.status_text,
-                if (isRunning) "Running" else "Offline"
+                if (isRunning) "Server running" else "Tap to start"
             )
 
+            // Update toggle icon
             views.setImageViewResource(
                 R.id.toggle_button,
                 if (isRunning) R.drawable.widget_toggle_stop
                 else R.drawable.widget_toggle_play
             )
 
+            // Toggle button click
             val toggleIntent = Intent(context, ServerStatusWidget::class.java).apply {
                 action = ACTION_TOGGLE_SERVER
             }
-            val pendingIntent = PendingIntent.getBroadcast(
+            val togglePending = PendingIntent.getBroadcast(
                 context, 0, toggleIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
-            views.setOnClickPendingIntent(R.id.toggle_button, pendingIntent)
-            views.setOnClickPendingIntent(R.id.widget_container, pendingIntent)
+            views.setOnClickPendingIntent(R.id.toggle_button, togglePending)
 
-            // Click status text to open app
+            // Tap anywhere on widget to toggle
+            views.setOnClickPendingIntent(R.id.widget_container, togglePending)
+
+            // Long press status text to open app
             val launchIntent = Intent(context, com.localshare.app.ui.FileShareActivity::class.java)
             launchIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             val launchPending = PendingIntent.getActivity(
                 context, 1, launchIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
-            views.setOnClickPendingIntent(R.id.status_text, launchPending)
             views.setOnClickPendingIntent(R.id.app_title, launchPending)
+            views.setOnClickPendingIntent(R.id.status_text, launchPending)
 
             appWidgetManager.updateAppWidget(widgetId, views)
         } catch (_: Exception) {}
