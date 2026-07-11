@@ -6,13 +6,44 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.net.Uri
+import android.os.Build
 import android.os.Environment
+import android.provider.Settings
 import android.widget.Toast
 
 object UpdateManager {
 
+    fun canInstallFromThisContext(context: Context): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            context.packageManager.canRequestPackageInstalls()
+        } else {
+            true
+        }
+    }
+
+    fun requestInstallPermission(context: Context) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            if (!context.packageManager.canRequestPackageInstalls()) {
+                val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+                    data = Uri.parse("package:${context.packageName}")
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+                try {
+                    context.startActivity(intent)
+                } catch (_: Exception) {}
+            }
+        }
+    }
+
     fun downloadAndInstallUpdate(context: Context, apkUrl: String) {
-        Toast.makeText(context, "Downloading update... See notifications for progress", Toast.LENGTH_LONG).show()
+        // Check install permission first
+        if (!canInstallFromThisContext(context)) {
+            Toast.makeText(context, "Please allow app installs from LocalShare first", Toast.LENGTH_LONG).show()
+            requestInstallPermission(context)
+            return
+        }
+
+        Toast.makeText(context, "Downloading update...", Toast.LENGTH_SHORT).show()
 
         val downloadManager = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
         val uri = Uri.parse(apkUrl)
@@ -26,32 +57,31 @@ object UpdateManager {
 
         val downloadId = downloadManager.enqueue(request)
 
-        // Register a receiver to automatically launch the installer when finished
+        // When download completes, launch InstallActivity (works on all Android versions)
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) {
                 val id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1)
                 if (id == downloadId) {
-                    val installIntent = Intent(Intent.ACTION_VIEW)
-                    val downloadedUri = downloadManager.getUriForDownloadedFile(downloadId)
-                    if (downloadedUri != null) {
-                        installIntent.setDataAndType(downloadedUri, "application/vnd.android.package-archive")
-                        installIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
-                        try {
-                            context.startActivity(installIntent)
-                        } catch (e: Exception) {
-                            e.printStackTrace()
-                            Toast.makeText(context, "Failed to start installation.", Toast.LENGTH_SHORT).show()
-                        }
+                    Toast.makeText(context, "Download complete. Opening installer...", Toast.LENGTH_SHORT).show()
+
+                    // Launch install from Activity context (required by Android 14+)
+                    val installIntent = InstallActivity.createIntent(context, downloadId)
+                    installIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    try {
+                        context.startActivity(installIntent)
+                    } catch (e: Exception) {
+                        Toast.makeText(context, "Cannot open installer. Check your downloads folder.", Toast.LENGTH_LONG).show()
                     }
+
                     // Unregister to prevent leaks
                     try {
                         context.unregisterReceiver(this)
-                    } catch (e: Exception) {}
+                    } catch (_: Exception) {}
                 }
             }
         }
 
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             context.registerReceiver(receiver, IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE), Context.RECEIVER_EXPORTED)
         } else {
             context.registerReceiver(receiver, IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE))

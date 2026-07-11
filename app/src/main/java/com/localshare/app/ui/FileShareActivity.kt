@@ -111,6 +111,12 @@ class FileShareActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        // Pre-request install permission so updates work smoothly
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            if (!packageManager.canRequestPackageInstalls()) {
+                // Don't force it, but let the user know when they try to update
+            }
+        }
     }
 
     private fun hasStoragePermission(): Boolean {

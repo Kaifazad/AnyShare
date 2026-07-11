@@ -76,6 +76,12 @@
             android:stateNotNeeded="true"
             android:theme="@style/zxing_CaptureTheme" />
 
+        <activity
+            android:name=".util.InstallActivity"
+            android:exported="false"
+            android:theme="@style/Theme.LocalShare"
+            android:screenOrientation="portrait" />
+
         <!-- Home Screen Widget -->
         <receiver
             android:name=".widget.ServerStatusWidget"
