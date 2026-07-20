@@ -23,7 +23,7 @@ android {
     defaultConfig {
         applicationId = "com.localshare.app"
         minSdk = 26
-        targetSdk = 34
+        targetSdk = 35
         versionCode = 3
         versionName = "1.2"
 

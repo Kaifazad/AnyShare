@@ -51,7 +51,7 @@
     </LinearLayout>
 
     <!-- Right: Circular button -->
-    <ImageButton
+    <ImageView
         android:id="@+id/toggle_button"
         android:layout_width="48dp"
         android:layout_height="48dp"
