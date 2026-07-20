@@ -1515,8 +1515,7 @@ private fun BatteryOptimizationSetting() {
             FilledTonalButton(
                 onClick = {
                     try {
-                        val intent = android.content.Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
-                        intent.data = android.net.Uri.parse("package:${context.packageName}")
+                        val intent = android.content.Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
                         context.startActivity(intent)
                     } catch (e: Exception) {
                         Toast.makeText(context, "Unable to open battery settings", Toast.LENGTH_SHORT).show()
