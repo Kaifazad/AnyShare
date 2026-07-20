@@ -213,7 +213,7 @@ fun HowToUseScreen(onBack: () -> Unit) {
             FeatureItem(
                 icon = Icons.Rounded.Security,
                 title = "Encryption",
-                description = "Enable encryption in Settings for AES-256-GCM encrypted file transfers. A unique key is generated for each session and embedded in the URL."
+                description = "Enable encryption in Settings for AES-256-GCM encrypted file transfers. A unique session key is generated and delivered only to authenticated clients (not embedded in the share URL)."
             )
 
             FeatureItem(

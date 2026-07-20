@@ -56,6 +56,8 @@ class FileShareServer(
 
     companion object {
         private const val TAG = "FileShareServer"
+        /** Files larger than this are not fully buffered for AES-GCM (avoids OOM). */
+        private const val MAX_ENCRYPT_IN_MEMORY_BYTES = 50L * 1024 * 1024
     }
 
     private val fileRepository = FileRepository(context)
@@ -277,6 +279,8 @@ class FileShareServer(
                 uri == "/api/files" -> serveFileList(session)
                 uri == "/api/files/clear" && method == Method.POST -> handleClearFiles()
                 uri == "/api/status" -> serveStatus()
+                // Encryption key only after PIN gate (never embed key in public share URLs)
+                uri == "/api/encryption-key" && method == Method.GET -> serveEncryptionKey()
                 uri == "/api/clipboard" && method == Method.GET -> serveClipboard()
                 uri == "/api/clipboard" && method == Method.POST -> handleSetClipboard(session)
                 uri.startsWith("/download/") -> serveDownload(session, uri, ip)
@@ -295,10 +299,11 @@ class FileShareServer(
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error serving $uri", e)
+            // Do not leak exception details to clients
             newFixedLengthResponse(
                 Response.Status.INTERNAL_ERROR,
                 MIME_PLAINTEXT,
-                "Internal Server Error: ${e.message}"
+                "Internal Server Error"
             )
         }
     }
@@ -951,34 +956,64 @@ class FileShareServer(
                 return newFixedLengthResponse(
                     Response.Status.INTERNAL_ERROR,
                     MIME_PLAINTEXT,
-                    "Error creating zip: ${e.message}"
+                    "Error creating zip"
                 )
             }
         }
 
         // ─── Encrypted download (full file, no Range) ────────────
+        // Skip in-memory encrypt for very large files to avoid OOM; fall back to plain stream.
         if (shouldEncrypt) {
-            try {
-                val physicalFile = File(file.path)
-                val fileBytes = if (physicalFile.exists() && physicalFile.canRead()) {
-                    physicalFile.readBytes()
-                } else {
-                    context.contentResolver.openInputStream(file.uri)?.use { it.readBytes() }
-                        ?: return notFound()
+            val physicalFile = File(file.path)
+            val sizeHint = when {
+                physicalFile.exists() -> physicalFile.length()
+                file.size > 0 -> file.size
+                else -> -1L
+            }
+            if (sizeHint > MAX_ENCRYPT_IN_MEMORY_BYTES) {
+                Log.w(TAG, "File too large for in-memory encrypt (${sizeHint}B): ${file.name}; serving plain")
+            } else {
+                try {
+                    val fileBytes = if (physicalFile.exists() && physicalFile.canRead()) {
+                        if (physicalFile.length() > MAX_ENCRYPT_IN_MEMORY_BYTES) {
+                            Log.w(TAG, "Abort encrypt for large file: ${file.name}")
+                            null
+                        } else {
+                            physicalFile.readBytes()
+                        }
+                    } else {
+                        context.contentResolver.openInputStream(file.uri)?.use { stream ->
+                            val limited = ByteArrayOutputStream()
+                            val buf = ByteArray(8192)
+                            var total = 0L
+                            var n: Int
+                            var tooLarge = false
+                            while (stream.read(buf).also { n = it } != -1) {
+                                total += n
+                                if (total > MAX_ENCRYPT_IN_MEMORY_BYTES) {
+                                    tooLarge = true
+                                    break
+                                }
+                                limited.write(buf, 0, n)
+                            }
+                            if (tooLarge) null else limited.toByteArray()
+                        }
+                    }
+                    if (fileBytes != null) {
+                        val encryptedBytes = FileEncryption.encrypt(fileBytes, currentKey!!)
+                        val response = newFixedLengthResponse(
+                            Response.Status.OK, "application/octet-stream",
+                            ByteArrayInputStream(encryptedBytes), encryptedBytes.size.toLong()
+                        )
+                        response.addHeader("Content-Disposition", "attachment; filename=\"${file.name}\"")
+                        response.addHeader("X-Encrypted", "aes-256-gcm")
+                        addDownloadHeaders(response)
+                        return response
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error encrypting file for download: ${file.name}", e)
+                    return newFixedLengthResponse(Response.Status.INTERNAL_ERROR, MIME_PLAINTEXT, "Encryption error")
                 }
-                val encryptedBytes = FileEncryption.encrypt(fileBytes, currentKey!!)
-                val resolvedMimeType = resolveStreamMimeType(file.name, file.mimeType)
-                val response = newFixedLengthResponse(
-                    Response.Status.OK, "application/octet-stream",
-                    ByteArrayInputStream(encryptedBytes), encryptedBytes.size.toLong()
-                )
-                response.addHeader("Content-Disposition", "attachment; filename=\"${file.name}\"")
-                response.addHeader("X-Encrypted", "aes-256-gcm")
-                addDownloadHeaders(response)
-                return response
-            } catch (e: Exception) {
-                Log.e(TAG, "Error encrypting file for download: ${file.name}", e)
-                return newFixedLengthResponse(Response.Status.INTERNAL_ERROR, MIME_PLAINTEXT, "Encryption error")
             }
         }
 
@@ -1130,10 +1165,9 @@ class FileShareServer(
         return newFixedLengthResponse(Response.Status.OK, "image/svg+xml", svg)
     }
 
-    @android.annotation.SuppressLint("ResourceType")
     private fun serveLogo(): Response {
         return try {
-            val inputStream = context.resources.openRawResource(R.drawable.logo)
+            val inputStream = context.resources.openRawResource(R.raw.logo)
             try {
                 val available = inputStream.available().toLong()
                 RangeRequestHandler.createResponseFromStream(inputStream, available, "image/png", null)
@@ -1147,15 +1181,27 @@ class FileShareServer(
         }
     }
 
-    @android.annotation.SuppressLint("ResourceType")
     private fun serveLogoDark(): Response {
         return try {
-            val inputStream = context.resources.openRawResource(R.drawable.logo_dark)
+            val inputStream = context.resources.openRawResource(R.raw.logo_dark)
             newChunkedResponse(Response.Status.OK, "image/png", inputStream)
         } catch (e: Exception) {
             Log.e(TAG, "Error serving dark logo", e)
             notFound()
         }
+    }
+
+    /**
+     * Returns the session encryption key only to clients that already passed the PIN gate.
+     * Prefer this over embedding the key in the public share URL / QR code.
+     */
+    private fun serveEncryptionKey(): Response {
+        val key = if (encryptionEnabled) getEncryptionKeyBase64() else null
+        val json = JSONObject().apply {
+            put("encrypted", encryptionEnabled && key != null)
+            if (key != null) put("key", key)
+        }
+        return newFixedLengthResponse(Response.Status.OK, "application/json", json.toString())
     }
 
     // ─── Helpers ─────────────────────────────────────────────────

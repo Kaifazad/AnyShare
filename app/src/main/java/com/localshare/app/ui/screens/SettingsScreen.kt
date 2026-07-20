@@ -1370,7 +1370,7 @@ fun EncryptionSetting(enabled: Boolean, onToggle: (Boolean) -> Unit) {
                 text = if (enabled) {
                     "Your files are encrypted before sending and decrypted on the other device. " +
                     "Even if someone intercepts the transfer, they cannot read your files. " +
-                    "The encryption key is embedded in the URL automatically."
+                    "The session key is given only to authenticated clients — it is not put in the share URL or QR code."
                 } else {
                     "When enabled, every file transfer is encrypted with AES-256-GCM military-grade encryption. " +
                     "Recommended when sharing sensitive files on public or shared networks. " +

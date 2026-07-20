@@ -122,14 +122,10 @@ class ServerForegroundService : Service() {
                 s.encryptionEnabled = encryptionEnabled
                 // Assign the instantiated server to the public property
                 server = s
+                // Keep share URL free of secrets (key is fetched via /api/encryption-key after auth)
                 val currentUrl = _serverUrl.value
                 val ip = currentUrl?.substringAfter("http://")?.substringBefore(":")
-                val baseUrl = if (ip != null) "http://$ip:$currentPort" else currentUrl
-                _serverUrl.value = if (encryptionEnabled && s.hasEncryptionKey() && baseUrl != null) {
-                    "$baseUrl?key=${s.getEncryptionKeyBase64()}"
-                } else {
-                    baseUrl
-                }
+                _serverUrl.value = if (ip != null) "http://$ip:$currentPort" else currentUrl
             }
         }
 
@@ -227,12 +223,8 @@ class ServerForegroundService : Service() {
                 throw Exception("Could not find an open port between 8080 and 8090")
             }
 
-            val baseUrl = "http://$ip:$currentPort"
-            val url = if (_encryptionEnabled && server?.hasEncryptionKey() == true) {
-                "$baseUrl?key=${server!!.getEncryptionKeyBase64()}"
-            } else {
-                baseUrl
-            }
+            // Never put encryption keys in the public URL (QR, clipboard, widget, logs)
+            val url = "http://$ip:$currentPort"
 
             _isRunning.value = true
             _serverUrl.value = url

@@ -434,6 +434,33 @@ private fun authenticateAndFetch(baseUrl: String, pin: String, onResult: (List<R
     }
 }
 
+/**
+ * Fetches the session AES key from the host after PIN gate (does not put key in share URLs).
+ * Returns null if encryption is off or the endpoint is unavailable.
+ */
+private fun fetchEncryptionKey(fileUrl: java.net.URL): ByteArray? {
+    return try {
+        val portPart = if (fileUrl.port != -1) ":${fileUrl.port}" else ""
+        val base = "${fileUrl.protocol}://${fileUrl.host}$portPart"
+        val conn = URL("$base/api/encryption-key").openConnection() as HttpURLConnection
+        conn.requestMethod = "GET"
+        conn.connectTimeout = 5000
+        conn.readTimeout = 5000
+        try {
+            if (conn.responseCode != 200) return null
+            val body = conn.inputStream.bufferedReader().readText()
+            val json = JSONObject(body)
+            if (!json.optBoolean("encrypted", false)) return null
+            val key = json.optString("key", "")
+            if (key.isBlank()) null else com.localshare.app.server.FileEncryption.decodeKey(key)
+        } finally {
+            conn.disconnect()
+        }
+    } catch (_: Exception) {
+        null
+    }
+}
+
 private fun downloadFile(
     context: Context,
     url: String,
@@ -443,10 +470,17 @@ private fun downloadFile(
     kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
         var connection: HttpURLConnection? = null
         try {
-            // Extract encryption key from URL if present
+            // Encryption key: prefer legacy ?key= in URL, else fetch after auth via /api/encryption-key
             val parsedUrl = java.net.URL(url)
             val keyParam = parsedUrl.query?.split("&")?.find { it.startsWith("key=") }?.removePrefix("key=")
-            val encryptionKey = keyParam?.let { com.localshare.app.server.FileEncryption.decodeKey(it) }
+            val encryptionKey = keyParam?.let {
+                try {
+                    com.localshare.app.server.FileEncryption.decodeKey(it)
+                } catch (_: Exception) {
+                    null
+                }
+            } ?: fetchEncryptionKey(parsedUrl)
+
 
             // Determine target directory for resume check
             val subFolder = when {
