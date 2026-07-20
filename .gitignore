@@ -13,3 +13,9 @@ local.properties
 .vscode
 *.jks
 /app/release
+
+# Release binaries & local design dumps (keep repo lean)
+*.apk
+*.aab
+*.ap_
+*.dex
