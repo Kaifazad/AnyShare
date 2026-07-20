@@ -1,8 +1,20 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("com.google.devtools.ksp")
 }
+
+// Signing secrets come from local.properties (gitignored) or env vars — never hardcode.
+val localProps = Properties().apply {
+    val f = rootProject.file("local.properties")
+    if (f.exists()) f.inputStream().use { load(it) }
+}
+fun propOrEnv(key: String): String =
+    localProps.getProperty(key)
+        ?: System.getenv(key)
+        ?: ""
 
 android {
     namespace = "com.localshare.app"
@@ -23,16 +35,22 @@ android {
 
     signingConfigs {
         create("release") {
-            storeFile = file("keystore.jks")
-            storePassword = "android123"
-            keyAlias = "my-key-alias"
-            keyPassword = "android123"
+            val storePath = propOrEnv("RELEASE_STORE_FILE").ifBlank { "keystore.jks" }
+            storeFile = file(storePath)
+            storePassword = propOrEnv("RELEASE_STORE_PASSWORD")
+            keyAlias = propOrEnv("RELEASE_KEY_ALIAS").ifBlank { "my-key-alias" }
+            keyPassword = propOrEnv("RELEASE_KEY_PASSWORD")
         }
     }
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("release")
+            // Only attach release signing when a password is configured (local.properties / CI).
+            val hasReleaseCreds = propOrEnv("RELEASE_STORE_PASSWORD").isNotBlank() &&
+                propOrEnv("RELEASE_KEY_PASSWORD").isNotBlank()
+            if (hasReleaseCreds) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
