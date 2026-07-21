@@ -1,77 +1,122 @@
 <div align="center">
   <img src="app/src/main/res/drawable/logo.png" alt="LocalShare Logo" width="120"/>
   <h1>LocalShare</h1>
-  <p><strong>A beautifully crafted, blazing-fast, and deeply integrated offline file sharing app for Android.</strong></p>
-  
+  <p><strong>Blazing-fast, offline file sharing for Android — no internet, no cloud, no tracking.</strong></p>
+
   <p>
     <a href="https://github.com/Kaifazad/LocalShare/releases/latest"><img src="https://img.shields.io/github/v/release/Kaifazad/LocalShare?style=for-the-badge&color=00BFA5" alt="Latest Release"/></a>
-    <img src="https://img.shields.io/badge/Platform-Android-3DDC84?style=for-the-badge&logo=android" alt="Platform: Android"/>
+    <img src="https://img.shields.io/badge/Platform-Android%208.0%2B-3DDC84?style=for-the-badge&logo=android" alt="Platform: Android 8.0+"/>
     <img src="https://img.shields.io/badge/Language-Kotlin-7F52FF?style=for-the-badge&logo=kotlin" alt="Language: Kotlin"/>
     <img src="https://img.shields.io/github/license/Kaifazad/LocalShare?style=for-the-badge&color=blue" alt="License: MIT"/>
   </p>
+
+  <a href="https://github.com/Kaifazad/LocalShare/releases/latest">
+    <img src="https://img.shields.io/badge/⬇️%20Download%20APK-v1.3.0-0070F3?style=for-the-badge" alt="Download APK"/>
+  </a>
 </div>
 
 ---
 
-**LocalShare** is a powerful, open-source Android application designed to seamlessly share files across any device completely offline. By utilizing direct Wi-Fi and hotspot connections alongside a beautifully crafted web interface, LocalShare brings the magic of AirDrop to any device with a browser—no app required on the receiving end.
+**LocalShare** is a free, open-source Android app that lets you share files with any device on your local network — no internet required. Your phone hosts a clean web server; anyone on the same Wi-Fi opens a browser, types the URL, and downloads or uploads files instantly. No app needed on the other end.
 
-## ✨ Key Features
+---
 
-- 🚀 **Blazing Fast Speeds:** Share gigabytes of data in seconds utilizing local Wi-Fi speeds without internet routing or cloud servers.
-- 🎨 **Stunning UI (Material You):** A premium, fluid interface built entirely in Jetpack Compose, supporting dynamic colors, dark mode, and sleek micro-animations.
-- 🌐 **Universal Web Interface:** The receiving device (PC, iPhone, Tablet, etc.) only needs a web browser. The app hosts a gorgeous, responsive Web UI to browse and download shared files.
-- 🔒 **Secure by Default:** Protect your local server with an auto-generated or custom 4-digit PIN. Advanced end-to-end encryption coming soon.
-- 📱 **Seamless Android Integration:** 
-  - Send files directly from other apps via Android's native Share Menu.
-  - Automatically pulls your Phone's Clipboard to seamlessly share text links.
-  - Quick Settings Tile and Home Screen Widget to start the server instantly.
-- 📺 **In-Browser Streaming:** Stream high-quality videos and listen to music directly from the Web UI without needing to download the files first.
-- 📂 **Share Anything:** Individual files, multiple files, folders, or even installed Apps (APKs) directly from your device.
+## 📸 Screenshots
 
-## 📥 Installation
+<div align="center">
+  <table>
+    <tr>
+      <td align="center">
+        <img src="docs/screenshots/screenshot_home.png" alt="Home Screen" width="220"/>
+        <br/><sub><b>Home Screen</b></sub>
+      </td>
+      <td align="center">
+        <img src="docs/screenshots/screenshot_files.png" alt="Shared Files" width="220"/>
+        <br/><sub><b>Shared Files</b></sub>
+      </td>
+      <td align="center">
+        <img src="docs/screenshots/screenshot_webui.png" alt="Web UI" width="220"/>
+        <br/><sub><b>Web UI (Browser)</b></sub>
+      </td>
+    </tr>
+  </table>
+</div>
 
-**[Download the latest APK from the Releases tab!](https://github.com/Kaifazad/LocalShare/releases/latest)**
+> **To add screenshots:** Create a `docs/screenshots/` folder in the repo root and add `screenshot_home.png`, `screenshot_files.png`, and `screenshot_webui.png`.
 
-1. Download the `app-release.apk` file from the latest release.
-2. Open the file on your Android device to install it.
-3. *Note: You may need to enable "Install unknown apps" in your Android settings.*
+---
+
+## ✨ Features
+
+- 🚀 **Blazing Fast** — Transfers run at full local Wi-Fi speed with no internet routing or cloud middlemen
+- 🌐 **Universal Web UI** — Any browser on any device (PC, iPhone, tablet) can browse, download, and upload files
+- 🖱️ **Drag & Drop Upload** — On desktop, drag files straight into the browser to send them to your phone
+- 🔒 **PIN Protection** — Optional 4-digit PIN locks your server so only trusted devices connect
+- 🔐 **End-to-End Encryption** — Optional AES-256-GCM encryption for extra-sensitive transfers
+- 📱 **Deep Android Integration** — Share from any app via the native Share Menu; Quick Settings Tile & Home Screen Widget
+- 📺 **In-Browser Streaming** — Stream video and audio directly in the browser without downloading
+- 📂 **Share Anything** — Files, folders, multiple items, APKs, and clipboard text
+- 🎨 **Material You Design** — Dynamic colors, dark mode, smooth animations built with Jetpack Compose
+
+---
+
+## 📥 Download
+
+**[⬇️ Download LocalShare-v1.3.0.apk](https://github.com/Kaifazad/LocalShare/releases/latest)**
+
+1. Download the APK from the Releases page
+2. Open the file on your Android phone
+3. Enable **"Install from unknown sources"** if prompted and install
+
+**Minimum:** Android 8.0 (API 26)
+
+---
 
 ## 🛠️ How It Works
 
-1. **Connect** your Android device and the receiving device (e.g., your laptop) to the same Wi-Fi network (or simply turn on your phone's Mobile Hotspot).
-2. **Select files** you wish to share inside the LocalShare app.
-3. **Open the browser** on your receiving device and type in the local address provided by the app (e.g., `http://192.168.1.5:8080`).
-4. **Enter the PIN** (if enabled) and instantly download or stream your files!
+1. **Start the server** — Open LocalShare and tap the Start button. The app shows you a local URL (e.g. `http://192.168.1.5:8080`)
+2. **Connect** — Make sure the receiving device is on the same Wi-Fi or hotspot
+3. **Open the browser** — Type the URL into any browser on the receiving device
+4. **Transfer files** — Browse and download shared files, or drag & drop files to upload back to your phone
 
-## 💻 Tech Stack & Architecture
+---
 
-LocalShare is built using modern Android development practices and libraries to ensure top-tier performance and maintainability:
+## 💻 Tech Stack
 
-- **Language:** 100% Kotlin
-- **UI Toolkit:** Jetpack Compose, Material 3
-- **Architecture:** MVVM (Model-View-ViewModel) + Kotlin Coroutines & Flow
-- **Local Server:** NanoHTTPD (Embedded Java HTTP Server)
-- **Database:** Room Database (for transfer history logging)
-- **Preferences:** DataStore (for type-safe settings)
-- **Media Loading:** Coil (Images) & Media3 ExoPlayer (Video)
-- **Web UI:** Vanilla HTML/CSS/JS (embedded efficiently as raw resources)
+| Layer | Technology |
+|---|---|
+| Language | 100% Kotlin |
+| UI | Jetpack Compose + Material 3 (Material You) |
+| Architecture | MVVM + Kotlin Coroutines & Flow |
+| Local Server | NanoHTTPD (embedded HTTP server) |
+| Encryption | AES-256-GCM (end-to-end) |
+| Preferences | DataStore |
+| Media | Coil (images) + Media3 ExoPlayer (video) |
+| Web UI | Vanilla HTML / CSS / JS |
+
+---
 
 ## 🤝 Contributing
 
-Contributions, issues, and feature requests are always welcome! Feel free to check the [issues page](https://github.com/Kaifazad/LocalShare/issues).
+Contributions, issues, and feature requests are welcome! Check the [issues page](https://github.com/Kaifazad/LocalShare/issues) or read [CONTRIBUTING.md](CONTRIBUTING.md).
 
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
+1. Fork the repo
+2. Create a feature branch: `git checkout -b feature/my-feature`
+3. Commit your changes: `git commit -m 'Add my feature'`
+4. Push: `git push origin feature/my-feature`
 5. Open a Pull Request
+
+---
 
 ## 👤 Author
 
 **Kaif Azad**
-- GitHub: [@kaifazad](https://github.com/kaifazad)
+- GitHub: [@Kaifazad](https://github.com/Kaifazad)
 - Instagram: [@kaif.azad](https://instagram.com/kaif.azad)
+- Website: [localshare.kaifazad.in](https://localshare.kaifazad.in)
+
+---
 
 ## 📝 License
 
-Distributed under the MIT License. See `LICENSE` for more information.
+Distributed under the MIT License. See [LICENSE](LICENSE) for details.

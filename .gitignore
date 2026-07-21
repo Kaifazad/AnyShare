@@ -19,3 +19,10 @@ local.properties
 *.aab
 *.ap_
 *.dex
+
+# AI agent & skill tool directories (local only, not for source control)
+.agents/
+gstack/
+.gemini/
+scratch/
+*.py

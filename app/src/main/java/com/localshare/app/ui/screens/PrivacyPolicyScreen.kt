@@ -86,7 +86,6 @@ fun PrivacyPolicyScreen(onBack: () -> Unit) {
                 title = "3. File Access",
                 content = "To share files, LocalShare requires access to your device storage. This access is used solely to:\n\n" +
                     "\u2022 Browse and select files you explicitly choose to share.\n" +
-                    "\u2022 Receive files from other devices and save them to Downloads/LocalShare.\n" +
                     "\u2022 Generate thumbnails for file preview in the web UI.\n\n" +
                     "Files are only accessible when you explicitly share them."
             )
@@ -104,7 +103,6 @@ fun PrivacyPolicyScreen(onBack: () -> Unit) {
                 title = "5. Notifications",
                 content = "LocalShare may request notification permission to inform you about:\n\n" +
                     "\u2022 Server status (running/stopped).\n" +
-                    "\u2022 Incoming file transfer requests.\n" +
                     "\u2022 File access events."
             )
 

@@ -140,7 +140,7 @@ fun AboutScreen(onBackClick: () -> Unit) {
                             .padding(horizontal = 16.dp, vertical = 8.dp)
                     ) {
                         Text(
-                            text = "Version v1.0.0",
+                            text = "Version v${com.localshare.app.BuildConfig.VERSION_NAME}",
                             color = MaterialTheme.colorScheme.onSecondaryContainer,
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.SemiBold

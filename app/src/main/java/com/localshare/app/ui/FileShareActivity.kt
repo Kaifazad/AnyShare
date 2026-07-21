@@ -27,7 +27,6 @@ import com.localshare.app.data.CrashRepository
 import com.localshare.app.data.ThemeMode
 import com.localshare.app.ui.screens.OnboardingScreen
 import com.localshare.app.ui.screens.PermissionsScreen
-import com.localshare.app.ui.screens.IncomingTransferDialog
 import com.localshare.app.ui.theme.LocalShareTheme
 
 /**
@@ -88,19 +87,6 @@ class FileShareActivity : ComponentActivity() {
                             // Normal app flow
                             else -> {
                                 LocalShareApp(viewModel = viewModel)
-
-                                // Show incoming transfer dialog when another device pushes files
-                                val incomingTransfer by viewModel.incomingTransfer.collectAsState()
-                                incomingTransfer?.let { session ->
-                                    if (session.status == com.localshare.app.data.SessionStatus.PENDING) {
-                                        IncomingTransferDialog(
-                                            session = session,
-                                            onAccept = { viewModel.acceptTransfer(it) },
-                                            onReject = { viewModel.rejectTransfer(it) },
-                                            onDismiss = { viewModel.dismissIncomingTransfer() }
-                                        )
-                                    }
-                                }
                             }
                         }
                     }

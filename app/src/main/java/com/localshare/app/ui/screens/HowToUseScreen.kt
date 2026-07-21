@@ -173,26 +173,7 @@ fun HowToUseScreen(onBack: () -> Unit) {
                 )
             }
 
-            HowToCard(
-                stepNumber = 5,
-                icon = Icons.Rounded.CheckCircle,
-                iconColor = Color(0xFF00897B),
-                title = "App-to-App Transfer",
-                description = "If the other device also has LocalShare installed, you can use the Nearby tab for direct phone-to-phone transfers:"
-            ) {
-                SubStep(
-                    label = "Discover Devices",
-                    detail = "Both devices auto-discover each other on the same network via mDNS."
-                )
-                SubStep(
-                    label = "Send Push",
-                    detail = "Select a device from the list and tap \"Send\" to push files directly."
-                )
-                SubStep(
-                    label = "Accept or Reject",
-                    detail = "The receiver gets a notification and dialog to accept or reject the transfer."
-                )
-            }
+
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 

@@ -126,14 +126,24 @@ import com.localshare.app.ui.utils.bounceClick
 import com.localshare.app.ui.utils.bounceScale
 import androidx.compose.foundation.interaction.MutableInteractionSource
 
+import androidx.compose.material.icons.rounded.Warning
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.rounded.Add
+
+
 @Composable
 fun HomeScreen(viewModel: FileShareViewModel, onFilesShared: () -> Unit = {}) {
     val isRunning by viewModel.isServerRunning.collectAsState()
     val serverUrl by viewModel.serverUrl.collectAsState()
     val connectedDevices by viewModel.connectedDeviceCount.collectAsState()
+    val activeDownloads by viewModel.activeDownloads.collectAsState()
+    val connectedClients by viewModel.connectedClients.collectAsState()
     val shareConfig by viewModel.shareConfig.collectAsState()
     val settings by viewModel.appSettings.collectAsState()
-    var showReceiveSheet by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
     val fileRepository = remember { com.localshare.app.data.FileRepository(context) }
@@ -181,12 +191,18 @@ fun HomeScreen(viewModel: FileShareViewModel, onFilesShared: () -> Unit = {}) {
             .padding(horizontal = 20.dp, vertical = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // ─── Hero Status Card ──────────────────────────────────
-        HeroStatusCard(
-            isRunning = isRunning,
-            connectedDevices = connectedDevices,
-            onToggleServer = { viewModel.toggleServer() }
-        )
+        SmartNetworkWarning()
+
+        if (activeDownloads.isNotEmpty()) {
+            LiveTransferDashboard(activeDownloads)
+        } else {
+            // ─── Hero Status Card ──────────────────────────────────
+            HeroStatusCard(
+                isRunning = isRunning,
+                connectedDevices = connectedDevices,
+                onToggleServer = { viewModel.toggleServer() }
+            )
+        }
 
         Spacer(modifier = Modifier.height(20.dp))
 
@@ -228,120 +244,55 @@ fun HomeScreen(viewModel: FileShareViewModel, onFilesShared: () -> Unit = {}) {
             enter = fadeIn() + expandVertically(),
             exit = fadeOut() + shrinkVertically()
         ) {
-            ServerUrlCard(
-                url = displayUrl,
-                deviceName = settings.deviceName,
-                connectedDevices = connectedDevices,
-                onCopy = { copyToClipboard(context, displayUrl) },
-                onEditName = { showNameDialog = true }
-            )
+            Column {
+                ServerUrlCard(
+                    url = displayUrl,
+                    deviceName = settings.deviceName,
+                    connectedDevices = connectedDevices,
+                    onCopy = { copyToClipboard(context, displayUrl) },
+                    onEditName = { showNameDialog = true }
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                ConnectedDevicesList(connectedClients)
+            }
         }
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // ─── Share Grid (Mesh Style) ───────────────────────────
-        Card(
-            shape = RoundedCornerShape(28.dp),
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainer
+        // ─── Dropzone ───────────────────────────
+        DropzoneCard(
+            onMedia = { mediaPicker.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)) },
+            onFiles = { filePicker.launch("*/*") }
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // Row of secondary share options (Text, Apps, Folders)
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            MeshShareButton(
+                icon = Icons.Rounded.Folder,
+                label = "Folder",
+                color = Color(0xFFE65100),
+                onClick = { folderPicker.launch(null) },
+                modifier = Modifier.weight(1f)
             )
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(20.dp)
-            ) {
-                Text(
-                    text = "Share",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-
-                // Row 1: Media, Files, Folders
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    MeshShareButton(
-                        icon = Icons.Rounded.Image,
-                        label = "Media",
-                        color = Color(0xFF4285F4),
-                        onClick = {
-                            mediaPicker.launch(androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))
-                        },
-                        modifier = Modifier.weight(1f)
-                    )
-                    MeshShareButton(
-                        icon = Icons.Rounded.Description,
-                        label = "Files",
-                        color = Color(0xFF2E7D32),
-                        onClick = { filePicker.launch("*/*") },
-                        modifier = Modifier.weight(1f)
-                    )
-                    MeshShareButton(
-                        icon = Icons.Rounded.Folder,
-                        label = "Folders",
-                        color = Color(0xFFE65100),
-                        onClick = { folderPicker.launch(null) },
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Row 2: Apps, Text
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    MeshShareButton(
-                        icon = Icons.Rounded.Android,
-                        label = "Apps",
-                        color = Color(0xFF7C3AED),
-                        onClick = { showAppPickerSheet = true },
-                        modifier = Modifier.weight(1f)
-                    )
-                    MeshShareButton(
-                        icon = Icons.Filled.ContentCopy,
-                        label = "Text",
-                        color = Color(0xFF0891B2),
-                        onClick = { showTextPasteDialog = true },
-                        modifier = Modifier.weight(1f)
-                    )
-                    // Spacer to balance the grid
-                    Spacer(modifier = Modifier.weight(1f))
-                }
-            }
+            MeshShareButton(
+                icon = Icons.Rounded.Android,
+                label = "App",
+                color = Color(0xFF7C3AED),
+                onClick = { showAppPickerSheet = true },
+                modifier = Modifier.weight(1f)
+            )
+            MeshShareButton(
+                icon = Icons.Filled.ContentCopy,
+                label = "Text",
+                color = Color(0xFF0891B2),
+                onClick = { showTextPasteDialog = true },
+                modifier = Modifier.weight(1f)
+            )
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // ─── Send to Nearby Device ─────────────────────────────
-        if (shareConfig.sharedFiles.isNotEmpty() && isRunning) {
-            var showSendToDeviceSheet by remember { mutableStateOf(false) }
-
-            FilledTonalButton(
-                onClick = { showSendToDeviceSheet = true },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.filledTonalButtonColors(
-                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onTertiaryContainer
-                )
-            ) {
-                Icon(Icons.AutoMirrored.Rounded.Send, contentDescription = null, modifier = Modifier.size(20.dp))
-                Spacer(modifier = Modifier.width(10.dp))
-                Text("Send to Nearby Device", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
-            }
-
-            if (showSendToDeviceSheet) {
-                SendToDeviceBottomSheet(onDismiss = { showSendToDeviceSheet = false }, viewModel = viewModel)
-            }
-        }
+        Spacer(modifier = Modifier.height(24.dp))
 
         // ─── Storage Usage ─────────────────────────────────────
         StorageUsageCard()
@@ -385,9 +336,6 @@ fun HomeScreen(viewModel: FileShareViewModel, onFilesShared: () -> Unit = {}) {
     } // End Main Column
 
     // ─── Bottom Sheets ──────────────────────────────────────────
-    if (showReceiveSheet) {
-        ReceiveBottomSheet(onDismiss = { showReceiveSheet = false })
-    }
 
     if (showTextPasteDialog) {
         TextShareBottomSheet(
@@ -1244,18 +1192,18 @@ fun AppIcon(apkPath: String, modifier: Modifier = Modifier) {
             val pm = context.packageManager
             val packageInfo = pm.getPackageArchiveInfo(apkPath, 0)
             if (packageInfo != null) {
-                packageInfo.applicationInfo.sourceDir = apkPath
-                packageInfo.applicationInfo.publicSourceDir = apkPath
-                val drawable = packageInfo.applicationInfo.loadIcon(pm)
+                packageInfo.applicationInfo?.sourceDir = apkPath
+                packageInfo.applicationInfo?.publicSourceDir = apkPath
+                val drawable = packageInfo.applicationInfo?.loadIcon(pm)
                 val androidBitmap = if (drawable is android.graphics.drawable.BitmapDrawable) {
                     drawable.bitmap
                 } else {
-                    val width = drawable.intrinsicWidth.takeIf { it > 0 } ?: 100
-                    val height = drawable.intrinsicHeight.takeIf { it > 0 } ?: 100
+                    val width = drawable?.intrinsicWidth ?: 1.takeIf { it > 0 } ?: 100
+                    val height = drawable?.intrinsicHeight ?: 1.takeIf { it > 0 } ?: 100
                     val bmp = android.graphics.Bitmap.createBitmap(width, height, android.graphics.Bitmap.Config.ARGB_8888)
                     val canvas = android.graphics.Canvas(bmp)
-                    drawable.setBounds(0, 0, canvas.width, canvas.height)
-                    drawable.draw(canvas)
+                    drawable?.setBounds(0, 0, canvas.width, canvas.height)
+                    drawable?.draw(canvas)
                     bmp
                 }
                 bitmap = androidBitmap.asImageBitmap()
@@ -1408,6 +1356,127 @@ private fun StorageUsageCard() {
                     }
                 }
             }
+        }
+    }
+}
+
+
+@Composable
+fun SmartNetworkWarning() {
+    val context = LocalContext.current
+    var isCellular by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        val cm = context.getSystemService(android.content.Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+        val cap = cm.getNetworkCapabilities(cm.activeNetwork)
+        isCellular = cap?.hasTransport(android.net.NetworkCapabilities.TRANSPORT_CELLULAR) == true
+    }
+    AnimatedVisibility(visible = isCellular) {
+        Card(
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
+        ) {
+            Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Rounded.Warning, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                Spacer(modifier = Modifier.width(12.dp))
+                Column {
+                    Text("Cellular Data Active", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onErrorContainer)
+                    Text("Using hotspot may consume your mobile data. Prefer Wi-Fi if available.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onErrorContainer)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun LiveTransferDashboard(activeDownloads: List<com.localshare.app.server.FileShareServer.ActiveDownload>) {
+    Card(
+        shape = RoundedCornerShape(24.dp),
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Text("Live Transfers", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(16.dp))
+            if (activeDownloads.isEmpty()) {
+                Text("No active transfers", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            } else {
+                activeDownloads.forEach { download ->
+                    Column(modifier = Modifier.padding(bottom = 12.dp)) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text(download.filename, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                            Text(formatSpeed(download.speedBytesPerSecond), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        }
+                        Spacer(modifier = Modifier.height(6.dp))
+                        LinearProgressIndicator(
+                            progress = { download.progress },
+                            modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                        )
+                        Text("${(download.progress * 100).toInt()}% • to ${download.ip}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 4.dp))
+                    }
+                }
+            }
+        }
+    }
+}
+
+fun formatSpeed(bytesPerSec: Long): String {
+    if (bytesPerSec < 1024) return "$bytesPerSec B/s"
+    if (bytesPerSec < 1024 * 1024) return "${bytesPerSec / 1024} KB/s"
+    return String.format("%.1f MB/s", bytesPerSec / (1024.0 * 1024.0))
+}
+
+@Composable
+fun ConnectedDevicesList(clients: List<com.localshare.app.server.FileShareServer.ConnectedClient>) {
+    AnimatedVisibility(visible = clients.isNotEmpty()) {
+        Card(
+            shape = RoundedCornerShape(24.dp),
+            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
+        ) {
+            Column(modifier = Modifier.padding(20.dp)) {
+                Text("Connected Devices", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(12.dp))
+                clients.forEach { client ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
+                    ) {
+                        Box(modifier = Modifier.size(10.dp).clip(CircleShape).background(Color.Green))
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(client.ip, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun DropzoneCard(onMedia: () -> Unit, onFiles: () -> Unit) {
+    Card(
+        shape = RoundedCornerShape(32.dp),
+        modifier = Modifier.fillMaxWidth().bounceClick(onClick = onFiles),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(80.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Rounded.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(40.dp))
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            Text("Add Files to Share", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
+            Text("Tap to select files from device", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f))
         }
     }
 }

@@ -58,6 +58,14 @@ const ShieldIcon = () => (
   </svg>
 );
 
+const UploadIcon = () => (
+  <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="16 16 12 12 8 16"></polyline>
+    <line x1="12" y1="12" x2="12" y2="21"></line>
+    <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"></path>
+  </svg>
+);
+
 export default function Home() {
   return (
     <div className={styles.container}>
@@ -161,6 +169,11 @@ export default function Home() {
               <h3 className={styles.featureTitle}>Beautiful Design</h3>
               <p className={styles.featureDesc}>Built with Jetpack Compose and Material 3. Multiple themes, dark mode, and a stunning glassmorphic web UI.</p>
             </div>
+            <div className={`${styles.featureCard} surface-card`}>
+              <div className={`${styles.featureIcon} ${styles.featureIconBlue}`}><UploadIcon /></div>
+              <h3 className={styles.featureTitle}>Drag & Drop Upload</h3>
+              <p className={styles.featureDesc}>Desktop users can drag files directly into the browser to upload them to the phone. No clicking required.</p>
+            </div>
           </div>
         </section>
 
@@ -173,7 +186,7 @@ export default function Home() {
               <div className={styles.stepContent}>
                 <h3 className={styles.featureTitle}>Start the Server</h3>
                 <p className={styles.featureDesc}>
-                  Open LocalShare and tap Start. The app spins up a secure local HTTP server and shows you a URL and QR code.
+                  Open LocalShare and tap Start. The app spins up a secure local HTTP server and shows you the URL to connect.
                 </p>
               </div>
             </div>

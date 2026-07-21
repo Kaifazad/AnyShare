@@ -112,7 +112,7 @@ fun FilesScreen(
         ) {
             Column {
                 Text(
-                    text = if (isMultiSelectMode) "${selectedIds.size} selected" else "Currently Sharing",
+                    text = if (isMultiSelectMode) "${selectedIds.size} selected" else "Shared Files",
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold
                 )

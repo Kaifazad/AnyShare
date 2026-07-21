@@ -62,6 +62,12 @@ class ServerForegroundService : Service() {
         private val _newUploadedFiles = kotlinx.coroutines.flow.MutableSharedFlow<java.io.File>(extraBufferCapacity = 100)
         val newUploadedFiles: kotlinx.coroutines.flow.SharedFlow<java.io.File> = _newUploadedFiles.asSharedFlow()
 
+        private val _activeDownloads = kotlinx.coroutines.flow.MutableStateFlow<List<com.localshare.app.server.FileShareServer.ActiveDownload>>(emptyList())
+        val activeDownloads: kotlinx.coroutines.flow.StateFlow<List<com.localshare.app.server.FileShareServer.ActiveDownload>> = _activeDownloads.asStateFlow()
+
+        private val _connectedClients = kotlinx.coroutines.flow.MutableStateFlow<List<com.localshare.app.server.FileShareServer.ConnectedClient>>(emptyList())
+        val connectedClients: kotlinx.coroutines.flow.StateFlow<List<com.localshare.app.server.FileShareServer.ConnectedClient>> = _connectedClients.asStateFlow()
+
         private val _clearFilesEvent = kotlinx.coroutines.flow.MutableSharedFlow<Unit>(extraBufferCapacity = 1)
         val clearFilesEvent: kotlinx.coroutines.flow.SharedFlow<Unit> = _clearFilesEvent.asSharedFlow()
 
@@ -105,11 +111,11 @@ class ServerForegroundService : Service() {
         /**
          * Update server settings (PIN, device name, max connections) at runtime.
          */
-        fun updateServerSettings(pin: String?, deviceName: String, maxConnections: Int, enableNearbyDiscovery: Boolean = true, encryptionEnabled: Boolean = false) {
+        fun updateServerSettings(pin: String?, deviceName: String, maxConnections: Int, encryptionEnabled: Boolean = false) {
             _pin = pin
             _deviceName = deviceName
             _maxConnections = maxConnections
-            _enableNearbyDiscovery = enableNearbyDiscovery
+
             _encryptionEnabled = encryptionEnabled
             // If server is already running, update it live
             server?.let { s ->
@@ -152,7 +158,6 @@ class ServerForegroundService : Service() {
         }
     }
 
-    private var broadcaster: com.localshare.app.server.DiscoveryBroadcaster? = null
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     override fun onCreate() {
@@ -200,8 +205,6 @@ class ServerForegroundService : Service() {
                         _clipboardCache?.let { text -> it.setSharedText(text) }
                         it.onIncomingTransfer = { session ->
                             _incomingTransfers.tryEmit(session)
-                            // Show notification for incoming transfer
-                            showIncomingTransferNotification(session)
                         }
                         it.start()
                         server = it
@@ -232,19 +235,21 @@ class ServerForegroundService : Service() {
             // Update widget
             try { com.localshare.app.widget.ServerStatusWidget.updateAllWidgets(this) } catch (_: Exception) {}
 
-            if (_enableNearbyDiscovery) {
-                // Register mDNS so the server is reachable at localshare.local
-                com.localshare.app.util.NsdHelper.register(this, currentPort, _deviceName)
-
-                // Start UDP Multicast Broadcaster
-                broadcaster = com.localshare.app.server.DiscoveryBroadcaster(this)
-                broadcaster?.start(_deviceName, currentPort)
-            }
 
             // Observe connected device count
             serviceScope.launch {
                 server?.connectedDeviceCount?.collect { count ->
                     _connectedDeviceCount.value = count
+                }
+            }
+            serviceScope.launch {
+                server?.activeDownloads?.collect { downloads ->
+                    _activeDownloads.value = downloads
+                }
+            }
+            serviceScope.launch {
+                server?.connectedClients?.collect { clients ->
+                    _connectedClients.value = clients
                 }
             }
 
@@ -287,74 +292,7 @@ class ServerForegroundService : Service() {
         // Update widget
         try { com.localshare.app.widget.ServerStatusWidget.updateAllWidgets(this) } catch (_: Exception) {}
 
-        // Unregister mDNS service
-        com.localshare.app.util.NsdHelper.unregister()
-
-        // Stop UDP Broadcast
-        broadcaster?.stop()
-        broadcaster = null
-
         Log.i(TAG, "Server stopped")
-    }
-
-    private fun showIncomingTransferNotification(session: com.localshare.app.data.TransferSession) {
-        try {
-            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            val channelId = "localshare_incoming"
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                if (notificationManager.getNotificationChannel(channelId) == null) {
-                    val channel = NotificationChannel(
-                        channelId,
-                        "Incoming Transfers",
-                        NotificationManager.IMPORTANCE_HIGH
-                    ).apply {
-                        description = "Notifications for incoming file transfers"
-                    }
-                    notificationManager.createNotificationChannel(channel)
-                }
-            }
-
-            val acceptIntent = Intent(this, com.localshare.app.receiver.TransferActionReceiver::class.java).apply {
-                action = "ACTION_ACCEPT_TRANSFER"
-                putExtra("EXTRA_SESSION_ID", session.sessionId)
-                putExtra("EXTRA_NOTIFICATION_ID", session.sessionId.hashCode())
-            }
-            val acceptPendingIntent = android.app.PendingIntent.getBroadcast(
-                this, session.sessionId.hashCode(), acceptIntent,
-                android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
-            )
-
-            val rejectIntent = Intent(this, com.localshare.app.receiver.TransferActionReceiver::class.java).apply {
-                action = "ACTION_REJECT_TRANSFER"
-                putExtra("EXTRA_SESSION_ID", session.sessionId)
-                putExtra("EXTRA_NOTIFICATION_ID", session.sessionId.hashCode())
-            }
-            val rejectPendingIntent = android.app.PendingIntent.getBroadcast(
-                this, session.sessionId.hashCode() + 1, rejectIntent,
-                android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
-            )
-
-            val notification = Notification.Builder(this, channelId)
-                .setSmallIcon(android.R.drawable.stat_sys_download)
-                .setContentTitle("Incoming Transfer")
-                .setContentText("${session.senderName} wants to send ${session.files.size} files")
-                .setStyle(Notification.BigTextStyle().bigText(
-                    "${session.senderName} wants to send ${session.files.size} files (${formatSize(session.totalSize)})"
-                ))
-                .addAction(Notification.Action.Builder(
-                    null, "Accept", acceptPendingIntent
-                ).build())
-                .addAction(Notification.Action.Builder(
-                    null, "Reject", rejectPendingIntent
-                ).build())
-                .setAutoCancel(true)
-                .build()
-
-            notificationManager.notify(session.sessionId.hashCode(), notification)
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to show incoming transfer notification", e)
-        }
     }
 
     private fun formatSize(bytes: Long): String = when {

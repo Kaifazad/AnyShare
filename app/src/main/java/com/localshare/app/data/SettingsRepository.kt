@@ -22,7 +22,6 @@ class SettingsRepository(private val context: Context) {
         private val KEY_PIN = stringPreferencesKey("pin")
         private val KEY_DEVICE_NAME = stringPreferencesKey("device_name")
         private val KEY_MAX_CONNECTIONS = intPreferencesKey("max_connections")
-        private val KEY_ENABLE_NEARBY = booleanPreferencesKey("enable_nearby")
         private val KEY_ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
         private val KEY_ENCRYPTION_ENABLED = booleanPreferencesKey("encryption_enabled")
 
@@ -63,7 +62,6 @@ class SettingsRepository(private val context: Context) {
             context.dataStore.edit { it[KEY_DEVICE_NAME] = name }
         }
         val maxConnections = prefs[KEY_MAX_CONNECTIONS] ?: 3
-        val enableNearby = prefs[KEY_ENABLE_NEARBY] ?: true
         val onboardingCompleted = prefs[KEY_ONBOARDING_COMPLETED] ?: false
         val encryptionEnabled = prefs[KEY_ENCRYPTION_ENABLED] ?: false
 
@@ -76,7 +74,6 @@ class SettingsRepository(private val context: Context) {
             pin = pin,
             deviceName = deviceName,
             maxConnections = maxConnections.coerceIn(1, 5),
-            enableNearbyDiscovery = enableNearby,
             onboardingCompleted = onboardingCompleted,
             encryptionEnabled = encryptionEnabled
         )
@@ -99,7 +96,6 @@ class SettingsRepository(private val context: Context) {
             }
             prefs[KEY_DEVICE_NAME] = settings.deviceName
             prefs[KEY_MAX_CONNECTIONS] = settings.maxConnections
-            prefs[KEY_ENABLE_NEARBY] = settings.enableNearbyDiscovery
             prefs[KEY_ONBOARDING_COMPLETED] = settings.onboardingCompleted
             prefs[KEY_ENCRYPTION_ENABLED] = settings.encryptionEnabled
         }

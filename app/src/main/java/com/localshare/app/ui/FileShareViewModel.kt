@@ -37,6 +37,9 @@ class FileShareViewModel(application: Application) : AndroidViewModel(applicatio
     val isServerRunning: StateFlow<Boolean> = ServerForegroundService.isRunning
     val serverUrl: StateFlow<String?> = ServerForegroundService.serverUrl
     val connectedDeviceCount: StateFlow<Int> = ServerForegroundService.connectedDeviceCount
+    
+    val activeDownloads: StateFlow<List<com.localshare.app.server.FileShareServer.ActiveDownload>> = ServerForegroundService.activeDownloads
+    val connectedClients: StateFlow<List<com.localshare.app.server.FileShareServer.ConnectedClient>> = ServerForegroundService.connectedClients
 
     // ─── Share Config ───────────────────────────────────────────
 
@@ -359,7 +362,7 @@ class FileShareViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun setMaxConnections(max: Int) = updateSettings { it.copy(maxConnections = max.coerceIn(1, 5)) }
 
-    fun setEnableNearbyDiscovery(enable: Boolean) = updateSettings { it.copy(enableNearbyDiscovery = enable) }
+
 
     fun setAmoledMode(enabled: Boolean) = updateSettings { it.copy(amoledMode = enabled) }
 
@@ -394,7 +397,6 @@ class FileShareViewModel(application: Application) : AndroidViewModel(applicatio
             pin = settings.pin,
             deviceName = settings.deviceName,
             maxConnections = settings.maxConnections,
-            enableNearbyDiscovery = settings.enableNearbyDiscovery,
             encryptionEnabled = settings.encryptionEnabled
         )
     }

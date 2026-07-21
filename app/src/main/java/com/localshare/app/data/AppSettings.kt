@@ -33,7 +33,6 @@ data class AppSettings(
     val pin: String? = null,
     val deviceName: String = "",
     val maxConnections: Int = 3,
-    val enableNearbyDiscovery: Boolean = true,
     val onboardingCompleted: Boolean = false,
     val encryptionEnabled: Boolean = false,
     val clipboardSyncEnabled: Boolean = true

@@ -63,7 +63,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.localshare.app.ui.screens.FilesScreen
-import com.localshare.app.ui.screens.FilePreviewScreen
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.background
 import com.localshare.app.ui.screens.HomeScreen
@@ -80,6 +80,13 @@ import com.localshare.app.ui.utils.bounceScale
 import androidx.compose.foundation.layout.height
 
 import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
 import androidx.navigation.NavController
 
 // ─── Navigation Routes ─────────────────────────────────────────────
@@ -95,11 +102,11 @@ sealed class Screen(
     val unselectedIcon: ImageVector
 ) {
     data object Send : Screen("send", "Send", Icons.Filled.Home, Icons.Outlined.Home)
-    data object History : Screen("history", "History", Icons.Rounded.History, Icons.Rounded.History)
+    data object SharedFiles : Screen("shared_files", "Shared", Icons.Rounded.History, Icons.Rounded.History)
     data object Settings : Screen("settings", "Settings", Icons.Filled.Settings, Icons.Outlined.Settings)
 }
 
-val screens = listOf(Screen.Send, Screen.History, Screen.Settings)
+val screens = listOf(Screen.Send, Screen.SharedFiles, Screen.Settings)
 
 // ─── Main App Composable ───────────────────────────────────────────
 
@@ -111,16 +118,16 @@ fun LocalShareApp(viewModel: FileShareViewModel = viewModel()) {
         navController = rootNavController,
         startDestination = "main_flow",
         enterTransition = { 
-            slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(300)) 
+            slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(400, easing = FastOutSlowInEasing)) + fadeIn(tween(400))
         },
         exitTransition = { 
-            slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(300)) 
+            slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Left, animationSpec = tween(400, easing = FastOutSlowInEasing)) + fadeOut(tween(400))
         },
         popEnterTransition = { 
-            slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(300)) 
+            slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(400, easing = FastOutSlowInEasing)) + fadeIn(tween(400))
         },
         popExitTransition = { 
-            slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(300)) 
+            slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, animationSpec = tween(400, easing = FastOutSlowInEasing)) + fadeOut(tween(400))
         }
     ) {
         composable("main_flow") {
@@ -132,8 +139,9 @@ fun LocalShareApp(viewModel: FileShareViewModel = viewModel()) {
             )
         }
         composable("transfer_history") {
-            com.localshare.app.ui.screens.TransferHistoryScreen(
-                onNavigateBack = { rootNavController.popBackStack() }
+            com.localshare.app.ui.screens.SharedFilesScreen(
+                onNavigateBack = { rootNavController.popBackStack() },
+                viewModel = viewModel
             )
         }
         composable("logs") {
@@ -157,36 +165,7 @@ fun LocalShareApp(viewModel: FileShareViewModel = viewModel()) {
                 onBack = { rootNavController.popBackStack() }
             )
         }
-        composable("file_preview/{fileId}") { backStackEntry ->
-            val fileId = backStackEntry.arguments?.getString("fileId")?.toLongOrNull()
-            val file = fileId?.let { viewModel.getFileById(it) }
-            FilePreviewScreen(
-                file = file,
-                onBack = { rootNavController.popBackStack() }
-            )
-        }
-        composable("uri_preview?uri={uri}&name={name}&type={type}") { backStackEntry ->
-            val uriStr = backStackEntry.arguments?.getString("uri")
-            val name = backStackEntry.arguments?.getString("name") ?: "File"
-            val type = backStackEntry.arguments?.getString("type") ?: "*/*"
-            
-            val dummyFile = uriStr?.let {
-                com.localshare.app.data.SharedFile(
-                    id = 0,
-                    name = name,
-                    path = "",
-                    uri = android.net.Uri.parse(android.net.Uri.decode(it)),
-                    size = 0,
-                    mimeType = type,
-                    category = com.localshare.app.data.FileCategory.DOCUMENTS,
-                    lastModified = 0
-                )
-            }
-            FilePreviewScreen(
-                file = dummyFile,
-                onBack = { rootNavController.popBackStack() }
-            )
-        }
+
         composable("history_details/{sessionId}") { backStackEntry ->
             val sessionId = backStackEntry.arguments?.getString("sessionId")
             if (sessionId != null) {
@@ -221,15 +200,7 @@ fun MainFlow(viewModel: FileShareViewModel, rootNavController: NavController) {
     val incomingSession by viewModel.incomingTransfer.collectAsState()
     val updateInfo by viewModel.updateInfo.collectAsState()
 
-    // Bottom sheet style accept/reject (slides up from bottom)
-    if (incomingSession != null && incomingSession?.status == com.localshare.app.data.SessionStatus.PENDING) {
-        com.localshare.app.ui.screens.IncomingTransferDialog(
-            session = incomingSession!!,
-            onAccept = { viewModel.acceptTransfer(it) },
-            onReject = { viewModel.rejectTransfer(it) },
-            onDismiss = { viewModel.dismissIncomingTransfer() }
-        )
-    }
+
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -335,17 +306,33 @@ fun MainFlow(viewModel: FileShareViewModel, rootNavController: NavController) {
             NavHost(
                 navController = bottomNavController,
                 startDestination = Screen.Send.route,
-                enterTransition = { fadeIn(animationSpec = tween(200)) },
-                exitTransition = { fadeOut(animationSpec = tween(200)) }
+                enterTransition = { 
+                    fadeIn(animationSpec = tween(300, easing = LinearEasing)) + 
+                    scaleIn(initialScale = 0.92f, animationSpec = tween(300, easing = FastOutSlowInEasing)) 
+                },
+                exitTransition = { 
+                    fadeOut(animationSpec = tween(300, easing = LinearEasing)) + 
+                    scaleOut(targetScale = 0.92f, animationSpec = tween(300, easing = FastOutSlowInEasing)) 
+                }
             ) {
                 composable(Screen.Send.route) {
                     com.localshare.app.ui.screens.SendScreen(
                         viewModel = viewModel,
-                        navController = rootNavController
+                        navController = rootNavController,
+                        onFilesSelected = {
+                            bottomNavController.navigate(Screen.SharedFiles.route) {
+                                popUpTo(bottomNavController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
                     )
                 }
-                composable(Screen.History.route) {
-                    com.localshare.app.ui.screens.TransferHistoryScreen(
+                composable(Screen.SharedFiles.route) {
+                    com.localshare.app.ui.screens.SharedFilesScreen(
+                        viewModel = viewModel,
                         onNavigateBack = { /* No-op, it's a tab now */ }
                     )
                 }

@@ -67,6 +67,18 @@ class FileShareServer(
     private val _connectedDeviceCount = MutableStateFlow(0)
     val connectedDeviceCount: StateFlow<Int> = _connectedDeviceCount.asStateFlow()
 
+    data class ConnectedClient(val ip: String, val lastSeenAt: Long)
+    private val _connectedClients = MutableStateFlow<List<ConnectedClient>>(emptyList())
+    val connectedClients: StateFlow<List<ConnectedClient>> = _connectedClients.asStateFlow()
+
+    data class ActiveDownload(val ip: String, val filename: String, val progress: Float, val speedBytesPerSecond: Long, val fileId: Long = 0L)
+    private val activeDownloadsMap = ConcurrentHashMap<String, ActiveDownload>()
+    private val _activeDownloads = MutableStateFlow<List<ActiveDownload>>(emptyList())
+    val activeDownloads: StateFlow<List<ActiveDownload>> = _activeDownloads.asStateFlow()
+
+    private val _serverEvents = kotlinx.coroutines.flow.MutableSharedFlow<String>(extraBufferCapacity = 100)
+
+
     private val thumbnailCache = object : LruCache<Long, ByteArray>(20 * 1024 * 1024) { // 20MB cache
         override fun sizeOf(key: Long, value: ByteArray): Int = value.size
     }
@@ -212,6 +224,11 @@ class FileShareServer(
         return shareConfig.sharedFiles
     }
 
+    private fun updateConnectedClients() {
+        _connectedDeviceCount.value = connectedIps.size
+        _connectedClients.value = connectedIps.map { ConnectedClient(it.key, it.value) }.sortedByDescending { it.lastSeenAt }
+    }
+
     override fun serve(session: IHTTPSession): Response {
         val uri = session.uri ?: "/"
         val ip = session.remoteIpAddress ?: "unknown"
@@ -220,7 +237,7 @@ class FileShareServer(
         // Track connected device
         connectedIps[ip] = System.currentTimeMillis()
         cleanupStaleConnections()
-        _connectedDeviceCount.value = connectedIps.size
+        updateConnectedClients()
 
         Log.d(TAG, "$method $uri from $ip")
 
@@ -281,6 +298,7 @@ class FileShareServer(
                 uri == "/api/status" -> serveStatus()
                 // Encryption key only after PIN gate (never embed key in public share URLs)
                 uri == "/api/encryption-key" && method == Method.GET -> serveEncryptionKey()
+                uri == "/api/events" && method == Method.GET -> serveSSE()
                 uri == "/api/clipboard" && method == Method.GET -> serveClipboard()
                 uri == "/api/clipboard" && method == Method.POST -> handleSetClipboard(session)
                 uri.startsWith("/download/") -> serveDownload(session, uri, ip)
@@ -568,19 +586,39 @@ class FileShareServer(
 
             val uploadedFiles = mutableListOf<String>()
             val fileNames = params["filename"] ?: emptyList()
-            var fileIndex = 0
             
             for ((key, tempPath) in bodyMap) {
-                if (key == "postData") continue
+                if (!key.startsWith("file")) continue
                 val tempFile = File(tempPath)
                 if (!tempFile.exists()) continue
 
-                val rawName = fileNames.getOrElse(fileIndex) { null } ?: "upload_${System.currentTimeMillis()}"
-                fileIndex++
+                val fileIndex = key.removePrefix("file").toIntOrNull()
+                val rawName = if (fileIndex != null && fileIndex < fileNames.size) {
+                    fileNames[fileIndex]
+                } else {
+                    "upload_${System.currentTimeMillis()}"
+                }
 
                 val destFile = getUniqueFile(localShareDir, rawName)
 
-                tempFile.copyTo(destFile, overwrite = true)
+                val currentKey = encryptionKey
+                val shouldDecrypt = encryptionEnabled && currentKey != null
+
+                if (shouldDecrypt) {
+                    try {
+                        val encryptedBytes = tempFile.readBytes()
+                        val decryptedBytes = FileEncryption.decrypt(encryptedBytes, currentKey!!)
+                        destFile.writeBytes(decryptedBytes)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Decryption failed for upload: ${tempFile.name}", e)
+                        // If decryption fails, we'll save the raw file as a fallback, or we can skip it.
+                        // Let's just write the raw bytes so data is not completely lost
+                        tempFile.copyTo(destFile, overwrite = true)
+                    }
+                } else {
+                    tempFile.copyTo(destFile, overwrite = true)
+                }
+
                 uploadedFiles.add(destFile.name)
                 newUploadedFiles.tryEmit(destFile)
 
@@ -1312,9 +1350,9 @@ class FileShareServer(
             val packageInfo = pm.getPackageArchiveInfo(file.path, 0)
             
             val drawable = if (packageInfo != null) {
-                packageInfo.applicationInfo.sourceDir = file.path
-                packageInfo.applicationInfo.publicSourceDir = file.path
-                packageInfo.applicationInfo.loadIcon(pm)
+                packageInfo.applicationInfo?.sourceDir = file.path
+                packageInfo.applicationInfo?.publicSourceDir = file.path
+                packageInfo.applicationInfo?.loadIcon(pm)
             } else {
                 androidx.core.content.ContextCompat.getDrawable(context, R.mipmap.ic_launcher)
             }
@@ -1365,8 +1403,22 @@ class FileShareServer(
             // Buffer the entire ZIP, encrypt, then serve as fixed response
             val baos = ByteArrayOutputStream()
             ZipOutputStream(baos).use { zos ->
+                val nameCounts = mutableMapOf<String, Int>()
                 for (file in filesToZip) {
-                    val entry = ZipEntry(file.name)
+                    val count = nameCounts.getOrDefault(file.name, 0)
+                    val finalName = if (count > 0) {
+                        val dotIndex = file.name.lastIndexOf('.')
+                        if (dotIndex != -1) {
+                            "${file.name.substring(0, dotIndex)} ($count)${file.name.substring(dotIndex)}"
+                        } else {
+                            "${file.name} ($count)"
+                        }
+                    } else {
+                        file.name
+                    }
+                    nameCounts[file.name] = count + 1
+
+                    val entry = ZipEntry(finalName)
                     zos.putNextEntry(entry)
                     context.contentResolver.openInputStream(file.uri)?.use { fis ->
                         fis.copyTo(zos, 65536)
@@ -1393,8 +1445,22 @@ class FileShareServer(
             CoroutineScope(Dispatchers.IO).launch {
                 try {
                     ZipOutputStream(pos).use { zos ->
+                        val nameCounts = mutableMapOf<String, Int>()
                         for (file in filesToZip) {
-                            val entry = ZipEntry(file.name)
+                            val count = nameCounts.getOrDefault(file.name, 0)
+                            val finalName = if (count > 0) {
+                                val dotIndex = file.name.lastIndexOf('.')
+                                if (dotIndex != -1) {
+                                    "${file.name.substring(0, dotIndex)} ($count)${file.name.substring(dotIndex)}"
+                                } else {
+                                    "${file.name} ($count)"
+                                }
+                            } else {
+                                file.name
+                            }
+                            nameCounts[file.name] = count + 1
+
+                            val entry = ZipEntry(finalName)
                             zos.putNextEntry(entry)
                             context.contentResolver.openInputStream(file.uri)?.use { fis ->
                                 fis.copyTo(zos, 65536)
@@ -1453,5 +1519,98 @@ class FileShareServer(
         connectedIps.clear()
         authenticatedIps.clear()
         _connectedDeviceCount.value = 0
+    }
+
+    private fun serveSSE(): Response {
+        val pos = PipedOutputStream()
+        val pis = PipedInputStream(pos)
+
+        CoroutineScope(Dispatchers.IO).launch {
+            val writer = pos.writer()
+            try {
+                // Send initial connection event
+                writer.write("data: {\"type\":\"CONNECTED\"}\n\n")
+                writer.write(": " + " ".repeat(8192) + "\n\n")
+                writer.flush()
+
+                _serverEvents.collect { event ->
+                    writer.write("data: $event\n\n")
+                    writer.write(": " + " ".repeat(8192) + "\n\n")
+                    writer.flush()
+                }
+            } catch (e: Exception) {
+                // Connection closed by client
+            } finally {
+                try { writer.close() } catch (e: Exception) {}
+            }
+        }
+
+        val res = newChunkedResponse(Response.Status.OK, "text/event-stream", pis)
+        res.addHeader("Cache-Control", "no-cache")
+        res.addHeader("Connection", "keep-alive")
+        res.addHeader("Access-Control-Allow-Origin", "*")
+        return res
+    }
+
+    fun broadcastEvent(eventJson: String) {
+        _serverEvents.tryEmit(eventJson)
+    }
+
+    private inner class ProgressTrackingInputStream(
+        val source: java.io.InputStream,
+        val ip: String,
+        val filename: String,
+        val fileId: Long,
+        val totalBytes: Long
+    ) : java.io.InputStream() {
+        private var bytesRead = 0L
+        private var lastUpdateTime = System.currentTimeMillis()
+        private var lastBytesRead = 0L
+
+        init {
+            updateFlow(0f, 0L)
+        }
+
+        override fun read(): Int {
+            val byte = source.read()
+            if (byte != -1) track(1) else complete()
+            return byte
+        }
+
+        override fun read(b: ByteArray, off: Int, len: Int): Int {
+            val read = source.read(b, off, len)
+            if (read != -1) track(read) else complete()
+            return read
+        }
+
+        override fun close() {
+            complete()
+            source.close()
+        }
+
+        private fun track(bytes: Int) {
+            bytesRead += bytes
+            val now = System.currentTimeMillis()
+            if (now - lastUpdateTime >= 500) {
+                val timeDiff = (now - lastUpdateTime) / 1000.0
+                val speed = if (timeDiff > 0) ((bytesRead - lastBytesRead) / timeDiff).toLong() else 0L
+                val progress = if (totalBytes > 0) (bytesRead.toFloat() / totalBytes) else 0f
+                updateFlow(progress, speed)
+                lastUpdateTime = now
+                lastBytesRead = bytesRead
+            }
+        }
+
+        private fun updateFlow(progress: Float, speed: Long) {
+            val key = "$ip-$fileId"
+            activeDownloadsMap[key] = ActiveDownload(ip, filename, progress, speed, fileId)
+            _activeDownloads.value = activeDownloadsMap.values.toList()
+        }
+
+        private fun complete() {
+            val key = "$ip-$fileId"
+            activeDownloadsMap.remove(key)
+            _activeDownloads.value = activeDownloadsMap.values.toList()
+        }
     }
 }

@@ -63,7 +63,7 @@ fun BugReportScreen(
             appendLine("**Device Info:**")
             appendLine("- Model: ${Build.MANUFACTURER} ${Build.MODEL}")
             appendLine("- Android: API ${Build.VERSION.SDK_INT} (${Build.VERSION.RELEASE})")
-            appendLine("- App Version: 1.0")
+            appendLine("- App Version: ${com.localshare.app.BuildConfig.VERSION_NAME}")
         }
     }
 
