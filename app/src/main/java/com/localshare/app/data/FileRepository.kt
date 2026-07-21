@@ -44,7 +44,12 @@ class FileRepository(private val context: Context) {
                 uri.lastPathSegment?.let { if (it.isNotEmpty() && !it.matches(Regex("^\\d+$"))) name = it }
             }
 
-            mimeType = context.contentResolver.getType(uri) ?: mimeType
+            val resolverMime = context.contentResolver.getType(uri)
+            mimeType = if (!resolverMime.isNullOrBlank() && resolverMime != "application/octet-stream") {
+                resolverMime
+            } else {
+                getMimeType(name)
+            }
         } else if (uri.scheme == "file") {
             val file = File(uri.path ?: "")
             name = file.name
@@ -131,8 +136,51 @@ class FileRepository(private val context: Context) {
 
     private fun getMimeType(fileName: String): String {
         val extension = fileName.substringAfterLast('.', "").lowercase()
-        return android.webkit.MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension)
-            ?: "application/octet-stream"
+        val fromMap = android.webkit.MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension)
+        if (!fromMap.isNullOrBlank() && fromMap != "application/octet-stream") {
+            return fromMap
+        }
+        return when (extension) {
+            "jpg", "jpeg" -> "image/jpeg"
+            "png" -> "image/png"
+            "gif" -> "image/gif"
+            "webp" -> "image/webp"
+            "bmp" -> "image/bmp"
+            "svg" -> "image/svg+xml"
+            "heic", "heif" -> "image/heic"
+            "avif" -> "image/avif"
+            "ico" -> "image/x-icon"
+            
+            "mp4", "m4v" -> "video/mp4"
+            "mkv" -> "video/x-matroska"
+            "mov" -> "video/quicktime"
+            "avi" -> "video/x-msvideo"
+            "webm" -> "video/webm"
+            "3gp" -> "video/3gpp"
+            "flv" -> "video/x-flv"
+            "ts" -> "video/mp2t"
+            "wmv" -> "video/x-ms-wmv"
+            
+            "mp3" -> "audio/mpeg"
+            "wav" -> "audio/wav"
+            "m4a" -> "audio/mp4"
+            "flac" -> "audio/flac"
+            "aac" -> "audio/aac"
+            "ogg" -> "audio/ogg"
+            "wma" -> "audio/x-ms-wma"
+
+            "pdf" -> "application/pdf"
+            "apk" -> "application/vnd.android.package-archive"
+            "zip" -> "application/zip"
+            "rar" -> "application/vnd.rar"
+            "7z" -> "application/x-7z-compressed"
+            "doc", "docx" -> "application/msword"
+            "xls", "xlsx" -> "application/vnd.ms-excel"
+            "ppt", "pptx" -> "application/vnd.ms-powerpoint"
+            "txt", "log", "md" -> "text/plain"
+            
+            else -> "application/octet-stream"
+        }
     }
 
     private fun resolveNameFromMediaStore(mediaId: String): String? {

@@ -587,17 +587,19 @@ class FileShareServer(
             val uploadedFiles = mutableListOf<String>()
             val fileNames = params["filename"] ?: emptyList()
             
+            var fileIdxCounter = 0
             for ((key, tempPath) in bodyMap) {
-                if (!key.startsWith("file")) continue
+                if (key == "postData" || key == "filename") continue
                 val tempFile = File(tempPath)
-                if (!tempFile.exists()) continue
+                if (!tempFile.exists() || tempFile.length() == 0L) continue
 
-                val fileIndex = key.removePrefix("file").toIntOrNull()
-                val rawName = if (fileIndex != null && fileIndex < fileNames.size) {
+                val fileIndex = key.removePrefix("file").toIntOrNull() ?: fileIdxCounter
+                val rawName = if (fileIndex < fileNames.size) {
                     fileNames[fileIndex]
                 } else {
                     "upload_${System.currentTimeMillis()}"
                 }
+                fileIdxCounter++
 
                 val destFile = getUniqueFile(localShareDir, rawName)
 
@@ -1281,11 +1283,29 @@ class FileShareServer(
             return newFixedLengthResponse(Response.Status.OK, "image/jpeg", ByteArrayInputStream(cached), cached.size.toLong())
         }
 
+        val resolvedMime = resolveStreamMimeType(file.name, file.mimeType)
+
+        // For SVG vectors, serve directly
+        if (resolvedMime == "image/svg+xml") {
+            try {
+                val input = if (!file.path.startsWith("virtual://") && File(file.path).exists()) {
+                    FileInputStream(File(file.path))
+                } else {
+                    context.contentResolver.openInputStream(file.uri)
+                }
+                if (input != null) {
+                    return newFixedLengthResponse(Response.Status.OK, "image/svg+xml", input, input.available().toLong())
+                }
+            } catch (_: Exception) {}
+        }
+
         val bitmap = try {
             when {
-                file.mimeType.startsWith("image/") -> {
+                resolvedMime.startsWith("image/") -> {
                     val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-                    if (!file.path.startsWith("virtual://") && File(file.path).exists()) {
+                    val isPhysical = !file.path.startsWith("virtual://") && File(file.path).exists()
+
+                    if (isPhysical) {
                         FileInputStream(File(file.path)).use {
                             BitmapFactory.decodeStream(it, null, options)
                         }
@@ -1305,7 +1325,7 @@ class FileShareServer(
                         }
                     }
                 }
-                file.mimeType.startsWith("video/") -> {
+                resolvedMime.startsWith("video/") -> {
                     val retriever = MediaMetadataRetriever()
                     val physicalFile = File(file.path)
                     if (physicalFile.exists() && physicalFile.canRead()) {
