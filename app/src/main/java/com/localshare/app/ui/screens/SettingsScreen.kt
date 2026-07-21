@@ -15,8 +15,13 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
@@ -32,6 +37,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -50,7 +56,9 @@ import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.rounded.Brush
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.DeleteSweep
+import androidx.compose.material.icons.rounded.FileDownload
 import androidx.compose.material.icons.rounded.FolderOpen
 import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.automirrored.rounded.InsertDriveFile
@@ -1754,198 +1762,324 @@ fun UpdatesContent(
 ) {
     val context = LocalContext.current
     val updateStatus by viewModel.updateStatus.collectAsState()
+    val downloadProgress by viewModel.downloadProgress.collectAsState()
+    val hasCachedApk by viewModel.hasCachedApk.collectAsState()
 
-    val currentVersion = remember {
-        com.localshare.app.BuildConfig.VERSION_NAME
+    val currentVersion = remember { com.localshare.app.BuildConfig.VERSION_NAME }
+
+    // Check for cached APK on first composition
+    LaunchedEffect(Unit) {
+        viewModel.checkCachedApk()
     }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(paddingValues)
-            .padding(horizontal = 24.dp)
+            .padding(horizontal = 20.dp)
             .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Spacer(modifier = Modifier.height(24.dp))
-        
-        // Header
-        Icon(
-            imageVector = Icons.Rounded.SystemUpdate,
-            contentDescription = null,
-            modifier = Modifier.size(72.dp),
-            tint = MaterialTheme.colorScheme.primary
-        )
         Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = "LocalShare Updater",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold
-        )
-        Text(
-            text = "Current Version: $currentVersion",
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Spacer(modifier = Modifier.height(32.dp))
 
-        // Animated State Transitions
+        // Current version chip
+        Surface(
+            shape = RoundedCornerShape(50),
+            color = MaterialTheme.colorScheme.surfaceContainer,
+            modifier = Modifier.wrapContentSize()
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.CheckCircle,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(16.dp)
+                )
+                Text(
+                    text = "Installed: v$currentVersion",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // ── Animated state card ───────────────────────────────────
         AnimatedContent(
             targetState = updateStatus,
             transitionSpec = {
-                (fadeIn(animationSpec = tween(300)) + scaleIn(initialScale = 0.9f)) togetherWith
-                        (fadeOut(animationSpec = tween(300)) + scaleOut(targetScale = 0.9f))
+                (fadeIn(animationSpec = tween(280)) + slideInVertically(tween(280)) { it / 6 }) togetherWith
+                    (fadeOut(animationSpec = tween(200)) + slideOutVertically(tween(200)) { -it / 6 })
             },
             label = "UpdateStateAnimation"
         ) { status ->
             when (status) {
+
+                // ── Checking ─────────────────────────────────────
                 FileShareViewModel.UpdateStatus.CHECKING -> {
                     Card(
-                        modifier = Modifier.fillMaxWidth().padding(16.dp),
-                        shape = RoundedCornerShape(24.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
                     ) {
                         Column(
                             modifier = Modifier.padding(32.dp).fillMaxWidth(),
-                            horizontalAlignment = Alignment.CenterHorizontally
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
-                            CircularWavyProgressIndicator(modifier = Modifier.size(48.dp), color = MaterialTheme.colorScheme.primary)
-                            Spacer(modifier = Modifier.height(24.dp))
-                            Text("Checking for latest updates...", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+                            CircularWavyProgressIndicator(
+                                modifier = Modifier.size(44.dp),
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                "Checking for updates…",
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
                 }
+
+                // ── Update available ──────────────────────────────
                 FileShareViewModel.UpdateStatus.UPDATE_AVAILABLE -> {
                     if (updateInfo != null) {
                         Card(
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(24.dp),
+                            shape = RoundedCornerShape(20.dp),
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
                         ) {
-                            Column(modifier = Modifier.padding(24.dp)) {
-                                Text("Version ${updateInfo.version} is here!", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimaryContainer)
-                                Spacer(modifier = Modifier.height(12.dp))
-                                Text(
-                                    text = updateInfo.description,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                                )
-                                Spacer(modifier = Modifier.height(24.dp))
+                            Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.SystemUpdate,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                    Text(
+                                        text = "v${updateInfo.version} available",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                }
+                                // Show only first 2 lines of changelog
+                                val shortDescription = updateInfo.description
+                                    .lines()
+                                    .filter { it.isNotBlank() }
+                                    .take(3)
+                                    .joinToString("\n")
+                                if (shortDescription.isNotBlank()) {
+                                    Text(
+                                        text = shortDescription,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
+                                        maxLines = 4,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(4.dp))
                                 Button(
                                     onClick = {
                                         if (updateInfo.apkUrl != null) {
-                                            com.localshare.app.util.UpdateManager.downloadAndInstallUpdate(context, updateInfo.apkUrl)
+                                            viewModel.downloadUpdate(updateInfo.apkUrl)
                                         } else {
                                             val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(updateInfo.releaseUrl))
                                             context.startActivity(intent)
                                         }
                                     },
                                     modifier = Modifier.fillMaxWidth(),
-                                    shape = RoundedCornerShape(16.dp),
+                                    shape = RoundedCornerShape(14.dp),
                                     contentPadding = PaddingValues(vertical = 14.dp)
                                 ) {
+                                    Icon(Icons.Rounded.FileDownload, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
                                     Text("Download & Install", fontWeight = FontWeight.Bold)
                                 }
                             }
                         }
                     }
                 }
+
+                // ── Downloading ───────────────────────────────────
+                FileShareViewModel.UpdateStatus.DOWNLOADING -> {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(24.dp).fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                CircularWavyProgressIndicator(
+                                    modifier = Modifier.size(28.dp),
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Column {
+                                    Text(
+                                        "Downloading update…",
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Text(
+                                        "${(downloadProgress * 100).toInt()}%",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                            LinearProgressIndicator(
+                                progress = { downloadProgress },
+                                modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
+                                color = MaterialTheme.colorScheme.primary,
+                                trackColor = MaterialTheme.colorScheme.surfaceContainerHighest
+                            )
+                        }
+                    }
+                }
+
+                // ── Up to date ────────────────────────────────────
                 FileShareViewModel.UpdateStatus.UP_TO_DATE -> {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(24.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest)
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
                     ) {
                         Column(
-                            modifier = Modifier.padding(32.dp).fillMaxWidth(),
-                            horizontalAlignment = Alignment.CenterHorizontally
+                            modifier = Modifier.padding(28.dp).fillMaxWidth(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Rounded.CheckCircle,
                                 contentDescription = null,
-                                tint = Color(0xFF10B981), // Emerald green
-                                modifier = Modifier.size(56.dp)
+                                tint = Color(0xFF22C55E),
+                                modifier = Modifier.size(48.dp)
                             )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text("You're fully up to date!", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge)
+                            Text("You're up to date", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                "v$currentVersion is the latest release.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                             Spacer(modifier = Modifier.height(8.dp))
-                            Text("Version $currentVersion is the latest release.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Spacer(modifier = Modifier.height(24.dp))
                             OutlinedButton(
                                 onClick = { viewModel.checkForUpdates(currentVersion) },
                                 modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(16.dp)
+                                shape = RoundedCornerShape(14.dp)
                             ) {
                                 Text("Check Again")
                             }
                         }
                     }
                 }
+
+                // ── Error ─────────────────────────────────────────
                 FileShareViewModel.UpdateStatus.ERROR -> {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(24.dp),
+                        shape = RoundedCornerShape(20.dp),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
                     ) {
                         Column(
                             modifier = Modifier.padding(24.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Rounded.Warning,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.size(48.dp)
+                                modifier = Modifier.size(40.dp)
                             )
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Text("Connection Failed", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onErrorContainer)
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text("Could not reach the update server. Please check your internet connection.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onErrorContainer, textAlign = TextAlign.Center)
-                            Spacer(modifier = Modifier.height(24.dp))
+                            Text("Couldn't check for updates", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onErrorContainer)
+                            Text(
+                                "Check your internet connection and try again.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                textAlign = TextAlign.Center
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
                             Button(
                                 onClick = { viewModel.checkForUpdates(currentVersion) },
                                 modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(16.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error, contentColor = MaterialTheme.colorScheme.onError)
+                                shape = RoundedCornerShape(14.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.error,
+                                    contentColor = MaterialTheme.colorScheme.onError
+                                )
                             ) {
                                 Text("Try Again")
                             }
                         }
                     }
                 }
+
+                // ── Idle (default) ────────────────────────────────
                 else -> {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(24.dp),
+                        shape = RoundedCornerShape(20.dp),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
                     ) {
                         Column(
-                            modifier = Modifier.padding(32.dp).fillMaxWidth(),
-                            horizontalAlignment = Alignment.CenterHorizontally
+                            modifier = Modifier.padding(28.dp).fillMaxWidth(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Rounded.SystemUpdate,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(48.dp)
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(44.dp)
                             )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text("Ready to update?", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.titleMedium)
+                            Text("Check for updates", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                "See if a newer version of LocalShare is available.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center
+                            )
                             Spacer(modifier = Modifier.height(8.dp))
-                            Text("Check if a newer version of LocalShare is available.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
-                            Spacer(modifier = Modifier.height(24.dp))
                             Button(
                                 onClick = { viewModel.checkForUpdates(currentVersion) },
                                 modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(16.dp),
+                                shape = RoundedCornerShape(14.dp),
                                 contentPadding = PaddingValues(vertical = 12.dp)
                             ) {
-                                Text("Check for Updates")
+                                Text("Check for Updates", fontWeight = FontWeight.SemiBold)
                             }
                         }
                     }
                 }
             }
         }
+
+        // ── Clear cached APK option ────────────────────────────────
+        if (hasCachedApk) {
+            Spacer(modifier = Modifier.height(16.dp))
+            OutlinedButton(
+                onClick = { viewModel.clearDownloadedApk() },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.4f))
+            ) {
+                Icon(Icons.Rounded.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Clear downloaded APK", fontWeight = FontWeight.Medium)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
     }
 }
+

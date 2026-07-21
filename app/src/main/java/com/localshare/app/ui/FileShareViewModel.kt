@@ -15,6 +15,8 @@ import com.localshare.app.data.SettingsRepository
 import com.localshare.app.data.SharedFile
 import com.localshare.app.data.ThemeMode
 import com.localshare.app.service.ServerForegroundService
+import com.localshare.app.util.UpdateManager
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -79,13 +81,30 @@ class FileShareViewModel(application: Application) : AndroidViewModel(applicatio
     
     // ─── App Updates ────────────────────────────────────────────
 
-    enum class UpdateStatus { IDLE, CHECKING, UP_TO_DATE, UPDATE_AVAILABLE, ERROR }
+    enum class UpdateStatus { IDLE, CHECKING, UP_TO_DATE, UPDATE_AVAILABLE, DOWNLOADING, ERROR }
 
     private val _updateInfo = MutableStateFlow<com.localshare.app.util.UpdateInfo?>(null)
     val updateInfo: StateFlow<com.localshare.app.util.UpdateInfo?> = _updateInfo.asStateFlow()
 
     private val _updateStatus = MutableStateFlow(UpdateStatus.IDLE)
     val updateStatus: StateFlow<UpdateStatus> = _updateStatus.asStateFlow()
+
+    private val _downloadProgress = MutableStateFlow(0f)
+    val downloadProgress: StateFlow<Float> = _downloadProgress.asStateFlow()
+
+    private val _hasCachedApk = MutableStateFlow(false)
+    val hasCachedApk: StateFlow<Boolean> = _hasCachedApk.asStateFlow()
+
+    fun checkCachedApk() {
+        val ctx = getApplication<Application>()
+        _hasCachedApk.value = UpdateManager.getCachedApkFile(ctx) != null
+    }
+
+    fun clearDownloadedApk() {
+        val ctx = getApplication<Application>()
+        UpdateManager.clearCachedApk(ctx)
+        _hasCachedApk.value = false
+    }
 
     fun checkForUpdates(currentVersion: String) {
         viewModelScope.launch {
@@ -100,6 +119,29 @@ class FileShareViewModel(application: Application) : AndroidViewModel(applicatio
                 }
             } catch (e: Exception) {
                 _updateStatus.value = UpdateStatus.ERROR
+            }
+        }
+    }
+
+    fun downloadUpdate(apkUrl: String) {
+        val ctx = getApplication<Application>()
+        _updateStatus.value = UpdateStatus.DOWNLOADING
+        _downloadProgress.value = 0f
+        val downloadId = UpdateManager.startDownload(ctx, apkUrl)
+        UpdateManager.registerCompletionReceiver(ctx, downloadId)
+        viewModelScope.launch {
+            // Poll progress until download completes or fails
+            while (_updateStatus.value == UpdateStatus.DOWNLOADING) {
+                val progress = UpdateManager.getDownloadProgress(ctx, downloadId)
+                if (progress >= 0f) {
+                    _downloadProgress.value = progress
+                    if (progress >= 1f) {
+                        _hasCachedApk.value = true
+                        _updateStatus.value = UpdateStatus.UPDATE_AVAILABLE
+                        break
+                    }
+                }
+                delay(500)
             }
         }
     }
