@@ -700,7 +700,7 @@ async function uploadFiles(files) {
                 continue;
             }
         }
-        formData.append("file" + i, file);
+        formData.append("file" + i, file, files[i].name);
         formData.append("filename", files[i].name);
     }
     

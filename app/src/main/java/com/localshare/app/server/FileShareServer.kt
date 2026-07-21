@@ -584,8 +584,10 @@ class FileShareServer(
             val bodyMap = HashMap<String, String>()
             session.parseBody(bodyMap)
 
+            val postParams = session.parameters
+            val fileNames = postParams["filename"] ?: postParams["file"] ?: emptyList()
+
             val uploadedFiles = mutableListOf<String>()
-            val fileNames = params["filename"] ?: emptyList()
             
             var fileIdxCounter = 0
             for ((key, tempPath) in bodyMap) {
@@ -594,10 +596,14 @@ class FileShareServer(
                 if (!tempFile.exists() || tempFile.length() == 0L) continue
 
                 val fileIndex = key.removePrefix("file").toIntOrNull() ?: fileIdxCounter
-                val rawName = if (fileIndex < fileNames.size) {
+                var rawName = if (fileIndex >= 0 && fileIndex < fileNames.size) {
                     fileNames[fileIndex]
                 } else {
-                    "upload_${System.currentTimeMillis()}"
+                    postParams[key]?.firstOrNull() ?: "upload_${System.currentTimeMillis()}"
+                }
+
+                if (rawName.isBlank() || rawName == "blob") {
+                    rawName = "upload_${System.currentTimeMillis()}"
                 }
                 fileIdxCounter++
 
