@@ -83,6 +83,18 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+
+    // Auto-name the release APK: LocalShare-v1.3.0.apk
+    applicationVariants.all {
+        val variant = this
+        outputs
+            .map { it as com.android.build.gradle.internal.api.BaseVariantOutputImpl }
+            .forEach { output ->
+                if (variant.buildType.name == "release") {
+                    output.outputFileName = "LocalShare-v${variant.versionName}.apk"
+                }
+            }
+    }
 }
 
 dependencies {
