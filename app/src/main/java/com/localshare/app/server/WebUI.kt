@@ -354,7 +354,9 @@ let encryptionKey = null;
 let lastFilesStr = '';
 
 function base64ToUint8Array(base64Str) {
-    const raw = window.atob(base64Str.replace(/-/g, '+').replace(/_/g, '/'));
+    let b64 = base64Str.replace(/-/g, '+').replace(/_/g, '/');
+    while (b64.length % 4) { b64 += '='; }
+    const raw = window.atob(b64);
     const result = new Uint8Array(new ArrayBuffer(raw.length));
     for (let i = 0; i < raw.length; i++) {
         result[i] = raw.charCodeAt(i);
@@ -669,6 +671,7 @@ async function uploadFiles(files) {
     document.getElementById('statFiles').textContent = "Uploading...";
     
     const formData = new FormData();
+    let appendedCount = 0;
     for (let i = 0; i < files.length; i++) {
         let file = files[i];
         if (encryptionKey) {
@@ -702,6 +705,12 @@ async function uploadFiles(files) {
         }
         formData.append("file" + i, file, files[i].name);
         formData.append("filename", files[i].name);
+        appendedCount++;
+    }
+    
+    if (appendedCount === 0) {
+        document.getElementById('statFiles').textContent = originalText;
+        return;
     }
     
     try {
