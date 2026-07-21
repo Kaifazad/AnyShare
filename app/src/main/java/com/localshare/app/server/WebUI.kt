@@ -537,6 +537,10 @@ async function downloadSelected() {
 }
 
 async function decryptAndDownload(id, filename) {
+    if (!window.crypto || !window.crypto.subtle) {
+        alert("Your browser blocks decryption over HTTP. Please disable encryption in the LocalShare Android app to download files on this device.");
+        return;
+    }
     try {
         const res = await fetch(`/download/${D}{id}`);
         const encryptedData = await res.arrayBuffer();
@@ -574,6 +578,10 @@ async function decryptAndDownload(id, filename) {
 }
 
 async function decryptAndDownloadZip(ids, filename) {
+    if (!window.crypto || !window.crypto.subtle) {
+        alert("Your browser blocks decryption over HTTP. Please disable encryption in the LocalShare Android app to download files on this device.");
+        return;
+    }
     try {
         const res = await fetch(`/api/download-zip?ids=${D}{ids}`);
         const encryptedData = await res.arrayBuffer();
@@ -666,6 +674,11 @@ document.getElementById('pinInput').addEventListener('keypress', function(e) {
 
 async function uploadFiles(files) {
     if (!files || files.length === 0) return;
+    
+    if (encryptionKey && (!window.crypto || !window.crypto.subtle)) {
+        alert("Your browser blocks encryption over HTTP. Please disable encryption in the LocalShare Android app to upload files from this device.");
+        return;
+    }
     
     const originalText = document.getElementById('statFiles').textContent;
     document.getElementById('statFiles').textContent = "Uploading...";
