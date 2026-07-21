@@ -1147,7 +1147,7 @@ class FileShareServer(
 
         // Try file path first for efficient range requests
         val physicalFile = File(file.path)
-        return if (physicalFile.exists() && physicalFile.canRead()) {
+        val response = if (physicalFile.exists() && physicalFile.canRead()) {
             RangeRequestHandler.createResponse(physicalFile, mimeType, rangeHeader)
         } else {
             // Fallback to content resolver
@@ -1159,9 +1159,12 @@ class FileShareServer(
                 )
             } catch (e: Exception) {
                 Log.e(TAG, "Error streaming file: ${file.name}", e)
-                notFound()
+                return notFound()
             }
         }
+
+        response.addHeader("Content-Disposition", "inline; filename=\"${file.name}\"")
+        return response
     }
 
     /**
@@ -1198,6 +1201,7 @@ class FileShareServer(
             lower.endsWith(".webp") -> "image/webp"
             lower.endsWith(".bmp") -> "image/bmp"
             lower.endsWith(".svg") -> "image/svg+xml"
+            lower.endsWith(".pdf") -> "application/pdf"
             else -> fallback
         }
     }
