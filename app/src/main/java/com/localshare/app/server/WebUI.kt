@@ -473,6 +473,16 @@ async function fetchKey() {
     } catch(e) {}
 }
 
+function escapeHtml(str) {
+    return (str || '').toString().replace(/[&<>"']/g, m => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+    })[m]);
+}
+
+function escapeJsString(str) {
+    return (str || '').toString().replace(/['"\\\r\n\u2028\u2029]/g, m => '\\' + m);
+}
+
 
 function getIconForType(typeIcon) {
     const icons = {
@@ -513,13 +523,13 @@ function renderGrid() {
                 </div>
                 <div class="file-info" style="display:flex; justify-content:space-between; align-items:center;">
                     <div style="overflow:hidden;">
-                        <h3>${D}{f.name}</h3>
+                        <h3 title="${D}{escapeHtml(f.name)}">${D}{escapeHtml(f.name)}</h3>
                         <div class="file-meta">
                             <span>${D}{f.typeIcon.toUpperCase()}</span>
                             <span style="margin-left:8px;">${D}{formatSize(f.size)}</span>
                         </div>
                     </div>
-                    <button class="btn" style="padding:8px; border-radius:50%; width:36px; height:36px; display:flex; align-items:center; justify-content:center; flex-shrink:0; background:var(--surface);" onclick="event.stopPropagation(); downloadSingle('${D}{f.id}', '${D}{f.name}')">
+                    <button class="btn" style="padding:8px; border-radius:50%; width:36px; height:36px; display:flex; align-items:center; justify-content:center; flex-shrink:0; background:var(--surface);" onclick="event.stopPropagation(); downloadSingle('${D}{f.id}', '${D}{escapeJsString(f.name)}')">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                     </button>
                 </div>
