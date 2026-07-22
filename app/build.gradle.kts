@@ -91,7 +91,7 @@ android {
             .map { it as com.android.build.gradle.internal.api.BaseVariantOutputImpl }
             .forEach { output ->
                 if (variant.buildType.name == "release") {
-                    output.outputFileName = "LocalShare-v${variant.versionName}.apk"
+                    output.outputFileName = "AnyShare-v${variant.versionName}.apk"
                 }
             }
     }
