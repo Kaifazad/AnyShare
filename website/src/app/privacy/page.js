@@ -94,7 +94,7 @@ export default function PrivacyPolicy() {
           <h2 style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--foreground)", marginBottom: "1rem", marginTop: "2.5rem" }}>10. Contact</h2>
           <p style={{ marginBottom: "1.5rem" }}>
             If you have questions about this Privacy Policy, please open an issue on our{' '}
-            <a href="https://github.com/Kaifazad/LocalShare/issues" target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent-primary)", fontWeight: 600 }}>GitHub repository</a>.
+            <a href="https://github.com/Kaifazad/AnyShare/issues" target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent-primary)", fontWeight: 600 }}>GitHub repository</a>.
           </p>
         </div>
       </main>
@@ -103,7 +103,7 @@ export default function PrivacyPolicy() {
         <div className={styles.footerLinks}>
           <Link href="/">Home</Link>
           <Link href="/privacy">Privacy Policy</Link>
-          <a href="https://github.com/Kaifazad/LocalShare" target="_blank" rel="noopener noreferrer">GitHub</a>
+          <a href="https://github.com/Kaifazad/AnyShare" target="_blank" rel="noopener noreferrer">GitHub</a>
         </div>
         <p>&copy; {new Date().getFullYear()} Developed by <a href="https://kaifazad.in" target="_blank" rel="noopener noreferrer" style={{textDecoration: 'underline', color: 'var(--foreground)'}}>Kaif Azad</a>. Open Source under the MIT License.</p>
       </footer>

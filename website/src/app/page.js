@@ -80,7 +80,7 @@ export default function Home() {
             <a href="#features">Features</a>
             <a href="#how-it-works">How It Works</a>
             <Link href="/privacy">Privacy</Link>
-            <a href="https://github.com/Kaifazad/LocalShare" target="_blank" rel="noopener noreferrer">GitHub</a>
+            <a href="https://github.com/Kaifazad/AnyShare" target="_blank" rel="noopener noreferrer">GitHub</a>
           </div>
         </div>
       </nav>
@@ -98,10 +98,10 @@ export default function Home() {
             A blazing-fast, beautifully crafted file sharing app for Android. Share photos, videos, documents, and entire folders with any device on your network &mdash; no internet required.
           </p>
           <div className={styles.buttonGroup}>
-            <a href="https://github.com/Kaifazad/LocalShare/releases/latest" target="_blank" rel="noopener noreferrer" className={styles.ctaButton}>
+            <a href="https://github.com/Kaifazad/AnyShare/releases/latest" target="_blank" rel="noopener noreferrer" className={styles.ctaButton}>
               <DownloadIcon /> Download APK
             </a>
-            <a href="https://github.com/Kaifazad/LocalShare" target="_blank" rel="noopener noreferrer" className={styles.secondaryButton}>
+            <a href="https://github.com/Kaifazad/AnyShare" target="_blank" rel="noopener noreferrer" className={styles.secondaryButton}>
               <GithubIcon /> View Source
             </a>
           </div>
@@ -219,10 +219,10 @@ export default function Home() {
               No ads, no trackers, no hidden subscriptions. LocalShare is built for the community, by the community. The entire source code is available under the MIT License.
             </p>
             <div className={styles.buttonGroup} style={{ justifyContent: "center" }}>
-              <a href="https://github.com/Kaifazad/LocalShare" target="_blank" rel="noopener noreferrer" className={styles.secondaryButton}>
+              <a href="https://github.com/Kaifazad/AnyShare" target="_blank" rel="noopener noreferrer" className={styles.secondaryButton}>
                 <GithubIcon /> View on GitHub
               </a>
-              <a href="https://github.com/Kaifazad/LocalShare/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer" className={styles.secondaryButton}>
+              <a href="https://github.com/Kaifazad/AnyShare/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer" className={styles.secondaryButton}>
                 Become a Contributor
               </a>
             </div>
@@ -235,10 +235,10 @@ export default function Home() {
       <footer className={styles.footer}>
         <div className={styles.footerInner}>
           <div className={styles.footerLinks}>
-            <a href="https://github.com/Kaifazad/LocalShare" target="_blank" rel="noopener noreferrer">GitHub</a>
-            <a href="https://github.com/Kaifazad/LocalShare/issues/new/choose" target="_blank" rel="noopener noreferrer">Report a Bug</a>
+            <a href="https://github.com/Kaifazad/AnyShare" target="_blank" rel="noopener noreferrer">GitHub</a>
+            <a href="https://github.com/Kaifazad/AnyShare/issues/new/choose" target="_blank" rel="noopener noreferrer">Report a Bug</a>
             <Link href="/privacy">Privacy Policy</Link>
-            <a href="https://github.com/Kaifazad/LocalShare/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">Contributing</a>
+            <a href="https://github.com/Kaifazad/AnyShare/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">Contributing</a>
           </div>
           <p>&copy; {new Date().getFullYear()} Developed by <a href="https://kaifazad.in" target="_blank" rel="noopener noreferrer" style={{textDecoration: 'underline', color: 'var(--foreground)'}}>Kaif Azad</a>. Open Source under the MIT License.</p>
         </div>
