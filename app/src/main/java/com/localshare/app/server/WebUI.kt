@@ -347,6 +347,58 @@ function toggleTheme() {
     updateThemeIcon(!isLight);
 }
 
+// ─── AES-256-GCM Polyfill (for HTTP contexts where crypto.subtle is blocked) ───
+(function(){
+  if(window.crypto&&window.crypto.subtle)return;
+  if(!window.crypto)window.crypto={};
+  var S=[99,124,119,123,242,107,111,197,48,1,103,43,254,215,171,118,202,130,201,125,250,89,71,240,173,212,162,175,156,164,114,192,183,253,147,38,54,63,247,204,52,165,229,241,113,216,49,21,4,199,35,195,24,150,5,154,7,18,128,226,235,39,178,117,9,131,44,26,27,110,90,160,82,59,214,179,41,227,47,132,83,209,0,237,32,252,177,91,106,203,190,57,74,76,88,207,208,239,170,251,67,77,51,133,69,249,2,127,80,60,159,168,81,163,64,143,146,157,56,245,188,182,218,33,16,255,243,210,205,12,19,236,95,151,68,23,196,167,126,61,100,93,25,115,96,129,79,220,34,42,144,136,70,238,184,20,222,94,11,219,224,50,58,10,73,6,36,92,194,211,172,98,145,149,228,121,231,200,55,109,141,213,78,169,108,86,244,234,101,122,174,8,186,120,37,46,28,166,180,198,232,221,116,31,75,189,139,138,112,62,181,102,72,3,246,14,97,53,87,185,134,193,29,158,225,248,152,17,105,217,142,148,155,30,135,233,206,85,40,223,140,161,137,13,191,230,66,104,65,153,45,15,176,84,187,22];
+  var Rc=[1,2,4,8,16,32,64,128,27,54];
+  var xt=function(a){return((a<<1)^(((a>>7)&1)*0x1b))&0xff;};
+  function subB(s){for(var i=0;i<16;i++)s[i]=S[s[i]];}
+  function shR(s){var t=s[1];s[1]=s[5];s[5]=s[9];s[9]=s[13];s[13]=t;t=s[2];s[2]=s[10];s[10]=t;t=s[6];s[6]=s[14];s[14]=t;t=s[15];s[15]=s[11];s[11]=s[7];s[7]=s[3];s[3]=t;}
+  function mxC(s){for(var i=0;i<16;i+=4){var a=s[i],b=s[i+1],c=s[i+2],d=s[i+3],e=a^b^c^d;s[i]^=e^xt(a^b);s[i+1]^=e^xt(b^c);s[i+2]^=e^xt(c^d);s[i+3]^=e^xt(d^a);}}
+  function aRK(s,w,o){for(var i=0;i<16;i++)s[i]^=w[o+i];}
+  function kExp(k){var Nk=k.length/4,Nr=Nk+6,W=new Uint8Array(16*(Nr+1));for(var i=0;i<k.length;i++)W[i]=k[i];for(var i=Nk;i<4*(Nr+1);i++){var t=[W[(i-1)*4],W[(i-1)*4+1],W[(i-1)*4+2],W[(i-1)*4+3]];if(i%Nk===0){var tmp=t[0];t[0]=S[t[1]]^Rc[i/Nk-1];t[1]=S[t[2]];t[2]=S[t[3]];t[3]=S[tmp];}else if(Nk>6&&i%Nk===4){t[0]=S[t[0]];t[1]=S[t[1]];t[2]=S[t[2]];t[3]=S[t[3]];}W[i*4]=W[(i-Nk)*4]^t[0];W[i*4+1]=W[(i-Nk)*4+1]^t[1];W[i*4+2]=W[(i-Nk)*4+2]^t[2];W[i*4+3]=W[(i-Nk)*4+3]^t[3];}return{w:W,nr:Nr};}
+  function aesBlk(b,ek){var s=new Uint8Array(b);aRK(s,ek.w,0);for(var r=1;r<ek.nr;r++){subB(s);shR(s);mxC(s);aRK(s,ek.w,r*16);}subB(s);shR(s);aRK(s,ek.w,ek.nr*16);return s;}
+  function ghMul(X,Y){var Z=new Uint8Array(16),V=new Uint8Array(Y);for(var i=0;i<128;i++){if((X[i>>>3]>>(7-(i&7)))&1){for(var j=0;j<16;j++)Z[j]^=V[j];}var lb=V[15]&1;for(var j=15;j>0;j--)V[j]=(V[j]>>>1)|((V[j-1]&1)<<7);V[0]>>>=1;if(lb)V[0]^=0xe1;}return Z;}
+  function ghash(H,d){var Y=new Uint8Array(16);for(var i=0;i<d.length;i+=16){var bl=new Uint8Array(16);for(var j=0;j<16&&i+j<d.length;j++)bl[j]=d[i+j];for(var j=0;j<16;j++)Y[j]^=bl[j];Y=ghMul(Y,H);}return Y;}
+  function incCtr(c){for(var i=15;i>=12;i--){c[i]=(c[i]+1)&0xff;if(c[i]!==0)break;}}
+  function gcmEnc(key,iv,pt){
+    var ek=kExp(key),H=aesBlk(new Uint8Array(16),ek);
+    var J0=new Uint8Array(16);for(var i=0;i<12;i++)J0[i]=iv[i];J0[15]=1;
+    var ct=new Uint8Array(pt.length),cb=new Uint8Array(J0);
+    for(var i=0;i<pt.length;i+=16){incCtr(cb);var eb=aesBlk(cb,ek);for(var j=0;j<16&&i+j<pt.length;j++)ct[i+j]=pt[i+j]^eb[j];}
+    var pl=Math.ceil(ct.length/16)*16,ad=new Uint8Array(pl+16);ad.set(ct);
+    var bits=ct.length*8,bH=Math.floor(bits/0x100000000),bL=bits>>>0;
+    ad[pl+8]=(bH>>>24)&0xff;ad[pl+9]=(bH>>>16)&0xff;ad[pl+10]=(bH>>>8)&0xff;ad[pl+11]=bH&0xff;
+    ad[pl+12]=(bL>>>24)&0xff;ad[pl+13]=(bL>>>16)&0xff;ad[pl+14]=(bL>>>8)&0xff;ad[pl+15]=bL&0xff;
+    var tag=ghash(H,ad),E0=aesBlk(J0,ek);for(var i=0;i<16;i++)tag[i]^=E0[i];
+    var out=new Uint8Array(ct.length+16);out.set(ct);out.set(tag,ct.length);return out;
+  }
+  function gcmDec(key,iv,data){
+    var ek=kExp(key),H=aesBlk(new Uint8Array(16),ek);
+    var ct=data.slice(0,data.length-16),rTag=data.slice(data.length-16);
+    var J0=new Uint8Array(16);for(var i=0;i<12;i++)J0[i]=iv[i];J0[15]=1;
+    var pl=Math.ceil(ct.length/16)*16,ad=new Uint8Array(pl+16);ad.set(ct);
+    var bits=ct.length*8,bH=Math.floor(bits/0x100000000),bL=bits>>>0;
+    ad[pl+8]=(bH>>>24)&0xff;ad[pl+9]=(bH>>>16)&0xff;ad[pl+10]=(bH>>>8)&0xff;ad[pl+11]=bH&0xff;
+    ad[pl+12]=(bL>>>24)&0xff;ad[pl+13]=(bL>>>16)&0xff;ad[pl+14]=(bL>>>8)&0xff;ad[pl+15]=bL&0xff;
+    var cTag=ghash(H,ad),E0=aesBlk(J0,ek);for(var i=0;i<16;i++)cTag[i]^=E0[i];
+    var ok=true;for(var i=0;i<16;i++)if(cTag[i]!==rTag[i])ok=false;
+    if(!ok)throw new Error("AES-GCM auth tag mismatch");
+    var pt=new Uint8Array(ct.length),cb=new Uint8Array(J0);
+    for(var i=0;i<ct.length;i+=16){incCtr(cb);var eb=aesBlk(cb,ek);for(var j=0;j<16&&i+j<ct.length;j++)pt[i+j]=ct[i+j]^eb[j];}
+    return pt;
+  }
+  window.crypto.subtle={
+    importKey:async function(f,d){return{_r:new Uint8Array(d)};},
+    encrypt:async function(a,k,d){return gcmEnc(k._r,new Uint8Array(a.iv),new Uint8Array(d)).buffer;},
+    decrypt:async function(a,k,d){return gcmDec(k._r,new Uint8Array(a.iv),new Uint8Array(d)).buffer;}
+  };
+  if(!window.crypto.getRandomValues){window.crypto.getRandomValues=function(a){for(var i=0;i<a.length;i++)a[i]=Math.floor(Math.random()*256);return a;};}
+})();
+// ─── End AES-GCM Polyfill ───
+
 // Data State
 let filesData = [];
 let selectedIds = new Set();
@@ -537,10 +589,6 @@ async function downloadSelected() {
 }
 
 async function decryptAndDownload(id, filename) {
-    if (!window.crypto || !window.crypto.subtle) {
-        alert("Your browser blocks decryption over HTTP. Please disable encryption in the LocalShare Android app to download files on this device.");
-        return;
-    }
     try {
         const res = await fetch(`/download/${D}{id}`);
         const encryptedData = await res.arrayBuffer();
@@ -578,10 +626,6 @@ async function decryptAndDownload(id, filename) {
 }
 
 async function decryptAndDownloadZip(ids, filename) {
-    if (!window.crypto || !window.crypto.subtle) {
-        alert("Your browser blocks decryption over HTTP. Please disable encryption in the LocalShare Android app to download files on this device.");
-        return;
-    }
     try {
         const res = await fetch(`/api/download-zip?ids=${D}{ids}`);
         const encryptedData = await res.arrayBuffer();
@@ -674,11 +718,6 @@ document.getElementById('pinInput').addEventListener('keypress', function(e) {
 
 async function uploadFiles(files) {
     if (!files || files.length === 0) return;
-    
-    if (encryptionKey && (!window.crypto || !window.crypto.subtle)) {
-        alert("Your browser blocks encryption over HTTP. Please disable encryption in the LocalShare Android app to upload files from this device.");
-        return;
-    }
     
     const originalText = document.getElementById('statFiles').textContent;
     document.getElementById('statFiles').textContent = "Uploading...";
