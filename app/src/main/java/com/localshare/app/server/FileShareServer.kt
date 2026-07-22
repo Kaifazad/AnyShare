@@ -102,7 +102,7 @@ class FileShareServer(
     var pin: String? = null
 
     @Volatile
-    var deviceName: String = "LocalShare"
+    var deviceName: String = "AnyShare"
 
     @Volatile
     var maxConnections: Int = 3
@@ -472,7 +472,7 @@ class FileShareServer(
                 try {
                     val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE)
                         as android.content.ClipboardManager
-                    val clip = android.content.ClipData.newPlainText("LocalShare", text)
+                    val clip = android.content.ClipData.newPlainText("AnyShare", text)
                     clipboard.setPrimaryClip(clip)
                     Log.d(TAG, "Clipboard set from laptop: ${text.take(50)}...")
                 } catch (e: Exception) {
@@ -513,7 +513,7 @@ class FileShareServer(
             val downloadsDir = android.os.Environment.getExternalStoragePublicDirectory(
                 android.os.Environment.DIRECTORY_DOWNLOADS
             )
-            val localShareDir = File(downloadsDir, "LocalShare")
+            val localShareDir = File(downloadsDir, "AnyShare")
             if (!localShareDir.exists()) localShareDir.mkdirs()
 
             // ─── Phone-to-Phone Push Transfer ───

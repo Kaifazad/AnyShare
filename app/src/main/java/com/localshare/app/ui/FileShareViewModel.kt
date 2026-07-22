@@ -336,7 +336,7 @@ class FileShareViewModel(application: Application) : AndroidViewModel(applicatio
                 val downloadsDir = android.os.Environment.getExternalStoragePublicDirectory(
                     android.os.Environment.DIRECTORY_DOWNLOADS
                 )
-                val localShareDir = java.io.File(downloadsDir, "LocalShare")
+                val localShareDir = java.io.File(downloadsDir, "AnyShare")
                 if (!localShareDir.exists()) localShareDir.mkdirs()
 
                 val destFile = java.io.File(localShareDir, file.name)

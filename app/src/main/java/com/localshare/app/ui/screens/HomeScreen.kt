@@ -1231,7 +1231,7 @@ fun AppIcon(apkPath: String, modifier: Modifier = Modifier) {
 
 private fun copyToClipboard(context: Context, text: String) {
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-    val clip = ClipData.newPlainText("LocalShare URL", text)
+    val clip = ClipData.newPlainText("AnyShare URL", text)
     clipboard.setPrimaryClip(clip)
     Toast.makeText(context, "URL copied to clipboard", Toast.LENGTH_SHORT).show()
 }
@@ -1274,7 +1274,7 @@ private fun StorageUsageCard() {
             val downloadsDir = android.os.Environment.getExternalStoragePublicDirectory(
                 android.os.Environment.DIRECTORY_DOWNLOADS
             )
-            val localShareDir = java.io.File(downloadsDir, "LocalShare")
+            val localShareDir = java.io.File(downloadsDir, "AnyShare")
             if (localShareDir.exists()) {
                 var totalSize = 0L
                 var count = 0
@@ -1332,7 +1332,7 @@ private fun StorageUsageCard() {
                                 val downloadsDir = android.os.Environment.getExternalStoragePublicDirectory(
                                     android.os.Environment.DIRECTORY_DOWNLOADS
                                 )
-                                val localShareDir = java.io.File(downloadsDir, "LocalShare")
+                                val localShareDir = java.io.File(downloadsDir, "AnyShare")
                                 if (localShareDir.exists()) {
                                     localShareDir.deleteRecursively()
                                     receivedSize = 0L

@@ -14,7 +14,7 @@ enum class ThemeMode(val displayName: String) {
  */
 enum class ColorPalette(val displayName: String, val previewColor: Long) {
     SYSTEM("System", 0xFF4285F4),       // Material You dynamic color (neutral representative)
-    LOCALSHARE("LocalShare", 0xFF2C2C2C), // Current minimalist grey
+    LOCALSHARE("AnyShare", 0xFF2C2C2C), // Current minimalist grey
     OCEAN("Ocean Blue", 0xFF1976D2),
     EMERALD("Emerald", 0xFF2E7D32),
     SUNSET("Sunset", 0xFFE65100),

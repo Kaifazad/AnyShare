@@ -1527,7 +1527,7 @@ fun StorageContent(paddingValues: PaddingValues) {
             val downloadsDir = android.os.Environment.getExternalStoragePublicDirectory(
                 android.os.Environment.DIRECTORY_DOWNLOADS
             )
-            val localShareDir = java.io.File(downloadsDir, "LocalShare")
+            val localShareDir = java.io.File(downloadsDir, "AnyShare")
             
             var size = 0L
             var images = 0
@@ -1691,7 +1691,7 @@ fun WidgetInfoContent(paddingValues: PaddingValues) {
                 Surface(shape = CircleShape, color = Color(0xFF22C55E), modifier = Modifier.size(44.dp)) {}
                 Spacer(modifier = Modifier.width(14.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("LocalShare", color = Color.White, fontWeight = FontWeight.Bold)
+                    Text("AnyShare", color = Color.White, fontWeight = FontWeight.Bold)
                     Text("http://192.168.x.x:8080", color = Color(0xFF888888), style = MaterialTheme.typography.bodySmall)
                 }
                 Surface(shape = CircleShape, color = Color(0xFF252540), modifier = Modifier.size(48.dp)) {

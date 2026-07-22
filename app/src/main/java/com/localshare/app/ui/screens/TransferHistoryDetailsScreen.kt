@@ -83,7 +83,7 @@ fun TransferHistoryDetailsScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable {
-                            val dir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LocalShare")
+                            val dir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "AnyShare")
                             val localFile = File(dir, fileInfo.fileName)
 
                             if (localFile.exists()) {

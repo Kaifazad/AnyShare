@@ -14,7 +14,7 @@ class WidgetCopyReceiver : BroadcastReceiver() {
             val url = ServerForegroundService.serverUrl.value
             if (url != null) {
                 val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                val clip = ClipData.newPlainText("LocalShare URL", url)
+                val clip = ClipData.newPlainText("AnyShare URL", url)
                 clipboard.setPrimaryClip(clip)
                 Toast.makeText(context, "URL copied!", Toast.LENGTH_SHORT).show()
             } else {

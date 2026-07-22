@@ -54,7 +54,7 @@ class ServerForegroundService : Service() {
 
         // Server settings from app settings
         private var _pin: String? = null
-        private var _deviceName: String = "LocalShare"
+        private var _deviceName: String = "AnyShare"
         private var _maxConnections: Int = 3
         private var _enableNearbyDiscovery: Boolean = true
         private var _encryptionEnabled: Boolean = false

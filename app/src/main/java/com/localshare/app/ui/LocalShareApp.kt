@@ -220,7 +220,7 @@ fun MainFlow(viewModel: FileShareViewModel, rootNavController: NavController) {
                             )
                             Spacer(modifier = Modifier.width(12.dp))
                             Text(
-                                text = if (currentScreen == Screen.Send) "LocalShare" else currentScreen.title,
+                                text = if (currentScreen == Screen.Send) "AnyShare" else currentScreen.title,
                                 fontWeight = FontWeight.Bold,
                                 style = MaterialTheme.typography.titleLarge
                             )

@@ -69,7 +69,7 @@ object UpdateManager {
 
         val uri = Uri.parse(apkUrl)
         val request = DownloadManager.Request(uri).apply {
-            setTitle("LocalShare Update")
+            setTitle("AnyShare Update")
             setDescription("Downloading the latest version…")
             setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
             setDestinationInExternalFilesDir(context, Environment.DIRECTORY_DOWNLOADS, UPDATE_APK_FILENAME)
