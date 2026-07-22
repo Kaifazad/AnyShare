@@ -1,9 +1,9 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "LocalShare | AirDrop for Everything",
+  title: "AnyShare | AirDrop for Everything",
   description: "A beautifully crafted, blazing-fast, and deeply integrated offline file sharing app for Android.",
-  keywords: "file sharing, android, offline, jetpack compose, localshare",
+  keywords: "file sharing, android, offline, jetpack compose, anyshare",
 };
 
 export default function RootLayout({ children }) {

@@ -74,7 +74,7 @@ export default function Home() {
         <div className={styles.navInner}>
           <Link href="/" className={styles.navLogo}>
             <span className={styles.navLogoIcon}>LS</span>
-            <span>LocalShare</span>
+            <span>AnyShare</span>
           </Link>
           <div className={styles.navLinks}>
             <a href="#features">Features</a>
@@ -110,7 +110,7 @@ export default function Home() {
               <div className={styles.heroPhoneScreen}>
                 <div className={styles.heroPhoneHeader}>
                   <div className={styles.heroPhoneDot}></div>
-                  <span>LocalShare</span>
+                  <span>AnyShare</span>
                 </div>
                 <div className={styles.heroPhoneContent}>
                   <div className={styles.heroPhoneStatus}>
@@ -137,7 +137,7 @@ export default function Home() {
 
         {/* FEATURES GRID */}
         <section id="features" className={styles.features}>
-          <h2 className={styles.sectionTitle}>Why LocalShare?</h2>
+          <h2 className={styles.sectionTitle}>Why AnyShare?</h2>
           <div className={styles.featuresGrid}>
             <div className={`${styles.featureCard} surface-card`}>
               <div className={`${styles.featureIcon} ${styles.featureIconBlue}`}><SpeedIcon /></div>
@@ -186,7 +186,7 @@ export default function Home() {
               <div className={styles.stepContent}>
                 <h3 className={styles.featureTitle}>Start the Server</h3>
                 <p className={styles.featureDesc}>
-                  Open LocalShare and tap Start. The app spins up a secure local HTTP server and shows you the URL to connect.
+                  Open AnyShare and tap Start. The app spins up a secure local HTTP server and shows you the URL to connect.
                 </p>
               </div>
             </div>
@@ -216,7 +216,7 @@ export default function Home() {
           <div className={`${styles.openSourceCard} surface-card`}>
             <h2 className={styles.sectionTitle}>100% Free &amp; Open Source</h2>
             <p>
-              No ads, no trackers, no hidden subscriptions. LocalShare is built for the community, by the community. The entire source code is available under the MIT License.
+              No ads, no trackers, no hidden subscriptions. AnyShare is built for the community, by the community. The entire source code is available under the Apache License 2.0.
             </p>
             <div className={styles.buttonGroup} style={{ justifyContent: "center" }}>
               <a href="https://github.com/Kaifazad/AnyShare" target="_blank" rel="noopener noreferrer" className={styles.secondaryButton}>
@@ -240,7 +240,7 @@ export default function Home() {
             <Link href="/privacy">Privacy Policy</Link>
             <a href="https://github.com/Kaifazad/AnyShare/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">Contributing</a>
           </div>
-          <p>&copy; {new Date().getFullYear()} Developed by <a href="https://kaifazad.in" target="_blank" rel="noopener noreferrer" style={{textDecoration: 'underline', color: 'var(--foreground)'}}>Kaif Azad</a>. Open Source under the MIT License.</p>
+          <p>&copy; {new Date().getFullYear()} Developed by <a href="https://kaifazad.in" target="_blank" rel="noopener noreferrer" style={{textDecoration: 'underline', color: 'var(--foreground)'}}>Kaif Azad</a>. Open Source under the Apache License 2.0.</p>
         </div>
       </footer>
     </div>

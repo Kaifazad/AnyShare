@@ -2,8 +2,8 @@ import styles from "../page.module.css";
 import Link from "next/link";
 
 export const metadata = {
-  title: "Privacy Policy | LocalShare",
-  description: "Privacy Policy for LocalShare - Offline file sharing app for Android.",
+  title: "Privacy Policy | AnyShare",
+  description: "Privacy Policy for AnyShare - Offline file sharing app for Android.",
 };
 
 export default function PrivacyPolicy() {
@@ -21,25 +21,25 @@ export default function PrivacyPolicy() {
 
           <h2 style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--foreground)", marginBottom: "1rem", marginTop: "2.5rem" }}>1. Overview</h2>
           <p style={{ marginBottom: "1.5rem" }}>
-            LocalShare is an offline file sharing application designed to transfer files between devices on the same local network. We are committed to protecting your privacy. This policy explains what data the app accesses and how it is used.
+            AnyShare is an offline file sharing application designed to transfer files between devices on the same local network. We are committed to protecting your privacy. This policy explains what data the app accesses and how it is used.
           </p>
 
           <h2 style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--foreground)", marginBottom: "1rem", marginTop: "2.5rem" }}>2. Data Collection</h2>
-          <p style={{ marginBottom: "1rem" }}>LocalShare is designed with privacy as a core principle. Here is what you should know:</p>
+          <p style={{ marginBottom: "1rem" }}>AnyShare is designed with privacy as a core principle. Here is what you should know:</p>
           <ul style={{ marginBottom: "1.5rem", paddingLeft: "1.5rem" }}>
             <li style={{ marginBottom: "0.5rem" }}><strong style={{ color: "var(--foreground)" }}>No data is sent to external servers.</strong> All file transfers happen directly between devices on your local network.</li>
             <li style={{ marginBottom: "0.5rem" }}><strong style={{ color: "var(--foreground)" }}>No analytics or tracking.</strong> The app does not collect usage statistics, device information, or any personal data for third-party services.</li>
-            <li style={{ marginBottom: "0.5rem" }}><strong style={{ color: "var(--foreground)" }}>No account required.</strong> LocalShare does not require registration, login, or any account creation.</li>
+            <li style={{ marginBottom: "0.5rem" }}><strong style={{ color: "var(--foreground)" }}>No account required.</strong> AnyShare does not require registration, login, or any account creation.</li>
             <li style={{ marginBottom: "0.5rem" }}><strong style={{ color: "var(--foreground)" }}>No internet required.</strong> The app works entirely offline over your local Wi-Fi or hotspot connection.</li>
           </ul>
 
           <h2 style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--foreground)", marginBottom: "1rem", marginTop: "2.5rem" }}>3. File Access</h2>
           <p style={{ marginBottom: "1.5rem" }}>
-            To share files, LocalShare requires access to your device storage. This access is used solely to:
+            To share files, AnyShare requires access to your device storage. This access is used solely to:
           </p>
           <ul style={{ marginBottom: "1.5rem", paddingLeft: "1.5rem" }}>
             <li style={{ marginBottom: "0.5rem" }}>Browse and select files, photos, videos, and folders that you explicitly choose to share.</li>
-            <li style={{ marginBottom: "0.5rem" }}>Receive files from other devices and save them to your Downloads/LocalShare folder.</li>
+            <li style={{ marginBottom: "0.5rem" }}>Receive files from other devices and save them to your Downloads/AnyShare folder.</li>
             <li style={{ marginBottom: "0.5rem" }}>Generate thumbnails for quick file preview in the web UI.</li>
           </ul>
           <p style={{ marginBottom: "1.5rem" }}>
@@ -48,7 +48,7 @@ export default function PrivacyPolicy() {
 
           <h2 style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--foreground)", marginBottom: "1rem", marginTop: "2.5rem" }}>4. Network Communication</h2>
           <p style={{ marginBottom: "1.5rem" }}>
-            LocalShare creates a local HTTP server on your device to serve shared files to other devices on the same network. This server:
+            AnyShare creates a local HTTP server on your device to serve shared files to other devices on the same network. This server:
           </p>
           <ul style={{ marginBottom: "1.5rem", paddingLeft: "1.5rem" }}>
             <li style={{ marginBottom: "0.5rem" }}>Only listens on your local network (Wi-Fi or hotspot).</li>
@@ -59,7 +59,7 @@ export default function PrivacyPolicy() {
 
           <h2 style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--foreground)", marginBottom: "1rem", marginTop: "2.5rem" }}>5. Notifications</h2>
           <p style={{ marginBottom: "1.5rem" }}>
-            LocalShare may request permission to send notifications. Notifications are used only to inform you about:
+            AnyShare may request permission to send notifications. Notifications are used only to inform you about:
           </p>
           <ul style={{ marginBottom: "1.5rem", paddingLeft: "1.5rem" }}>
             <li style={{ marginBottom: "0.5rem" }}>Server status (running/stopped).</li>
@@ -69,7 +69,7 @@ export default function PrivacyPolicy() {
 
           <h2 style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--foreground)", marginBottom: "1rem", marginTop: "2.5rem" }}>6. Third-Party Services</h2>
           <p style={{ marginBottom: "1.5rem" }}>
-            LocalShare uses the following third-party components, each with their own privacy policies:
+            AnyShare uses the following third-party components, each with their own privacy policies:
           </p>
           <ul style={{ marginBottom: "1.5rem", paddingLeft: "1.5rem" }}>
             <li style={{ marginBottom: "0.5rem" }}><strong style={{ color: "var(--foreground)" }}>Google Fonts</strong> &mdash; Used to load the DM Sans font in the web UI. Google may collect font request data per their privacy policy.</li>
@@ -83,7 +83,7 @@ export default function PrivacyPolicy() {
 
           <h2 style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--foreground)", marginBottom: "1rem", marginTop: "2.5rem" }}>8. Children&apos;s Privacy</h2>
           <p style={{ marginBottom: "1.5rem" }}>
-            LocalShare is not directed at children under 13. We do not knowingly collect personal information from children.
+            AnyShare is not directed at children under 13. We do not knowingly collect personal information from children.
           </p>
 
           <h2 style={{ fontSize: "1.5rem", fontWeight: 700, color: "var(--foreground)", marginBottom: "1rem", marginTop: "2.5rem" }}>9. Changes to This Policy</h2>
@@ -105,7 +105,7 @@ export default function PrivacyPolicy() {
           <Link href="/privacy">Privacy Policy</Link>
           <a href="https://github.com/Kaifazad/AnyShare" target="_blank" rel="noopener noreferrer">GitHub</a>
         </div>
-        <p>&copy; {new Date().getFullYear()} Developed by <a href="https://kaifazad.in" target="_blank" rel="noopener noreferrer" style={{textDecoration: 'underline', color: 'var(--foreground)'}}>Kaif Azad</a>. Open Source under the MIT License.</p>
+        <p>&copy; {new Date().getFullYear()} Developed by <a href="https://kaifazad.in" target="_blank" rel="noopener noreferrer" style={{textDecoration: 'underline', color: 'var(--foreground)'}}>Kaif Azad</a>. Open Source under the Apache License 2.0.</p>
       </footer>
     </div>
   );
