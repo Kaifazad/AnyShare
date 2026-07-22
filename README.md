@@ -10,14 +10,14 @@
     <img src="https://img.shields.io/github/license/Kaifazad/AnyShare?style=for-the-badge&color=blue" alt="License: MIT"/>
   </p>
 
-  <a href="https://github.com/Kaifazad/LocalShare/releases/latest">
+  <a href="https://github.com/Kaifazad/AnyShare/releases/latest">
     <img src="https://img.shields.io/badge/⬇️%20Download%20APK-v1.3.0-0070F3?style=for-the-badge" alt="Download APK"/>
   </a>
 </div>
 
 ---
 
-**LocalShare** is a free, open-source Android app that lets you share files with any device on your local network — no internet required. Your phone hosts a clean web server; anyone on the same Wi-Fi opens a browser, types the URL, and downloads or uploads files instantly. No app needed on the other end.
+**AnyShare** is a free, open-source Android app that lets you share files with any device on your local network — no internet required. Your phone hosts a clean web server; anyone on the same Wi-Fi opens a browser, types the URL, and downloads or uploads files instantly. No app needed on the other end.
 
 ---
 
@@ -62,7 +62,7 @@
 
 ## 📥 Download
 
-**[⬇️ Download LocalShare-v1.3.0.apk](https://github.com/Kaifazad/LocalShare/releases/latest)**
+**[⬇️ Download AnyShare-v1.3.0.apk](https://github.com/Kaifazad/AnyShare/releases/latest)**
 
 1. Download the APK from the Releases page
 2. Open the file on your Android phone
@@ -74,7 +74,7 @@
 
 ## 🛠️ How It Works
 
-1. **Start the server** — Open LocalShare and tap the Start button. The app shows you a local URL (e.g. `http://192.168.1.5:8080`)
+1. **Start the server** — Open AnyShare and tap the Start button. The app shows you a local URL (e.g. `http://192.168.1.5:8080`)
 2. **Connect** — Make sure the receiving device is on the same Wi-Fi or hotspot
 3. **Open the browser** — Type the URL into any browser on the receiving device
 4. **Transfer files** — Browse and download shared files, or drag & drop files to upload back to your phone
@@ -98,7 +98,7 @@
 
 ## 🤝 Contributing
 
-Contributions, issues, and feature requests are welcome! Check the [issues page](https://github.com/Kaifazad/LocalShare/issues) or read [CONTRIBUTING.md](CONTRIBUTING.md).
+Contributions, issues, and feature requests are welcome! Check the [issues page](https://github.com/Kaifazad/AnyShare/issues) or read [CONTRIBUTING.md](CONTRIBUTING.md).
 
 1. Fork the repo
 2. Create a feature branch: `git checkout -b feature/my-feature`
@@ -113,7 +113,7 @@ Contributions, issues, and feature requests are welcome! Check the [issues page]
 **Kaif Azad**
 - GitHub: [@Kaifazad](https://github.com/Kaifazad)
 - Instagram: [@kaif.azad](https://instagram.com/kaif.azad)
-- Website: [localshare.kaifazad.in](https://localshare.kaifazad.in)
+- Website: [anyshare.kaifazad.in](https://anyshare.kaifazad.in)
 
 ---
 

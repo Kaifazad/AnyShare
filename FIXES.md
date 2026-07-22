@@ -1,4 +1,4 @@
-# LocalShare Fix Log
+# AnyShare Fix Log
 
 Chronological record of fixes applied after safety checkpoint `safe-checkpoint-v1.2.0`.
 
