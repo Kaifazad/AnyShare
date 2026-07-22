@@ -11,8 +11,11 @@
   </p>
 
   <a href="https://github.com/Kaifazad/AnyShare/releases/latest">
-    <img src="https://img.shields.io/badge/⬇️%20Download%20APK-v1.3.0-0070F3?style=for-the-badge" alt="Download APK"/>
+    <img src="https://img.shields.io/badge/⬇️%20Download%20APK-v1.0.0-0070F3?style=for-the-badge" alt="Download APK"/>
   </a>
+  <br/>
+  <br/>
+  <img src="https://img.shields.io/badge/▶️%20Google%20Play-Coming%20Soon-black?style=for-the-badge&logo=googleplay" alt="Coming Soon on Play Store"/>
 </div>
 
 ---
