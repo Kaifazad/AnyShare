@@ -119,4 +119,4 @@ Contributions, issues, and feature requests are welcome! Check the [issues page]
 
 ## 📝 License
 
-Distributed under the MIT License. See [LICENSE](LICENSE) for details.
+Distributed under the Apache License 2.0. See [LICENSE](LICENSE) for details.
