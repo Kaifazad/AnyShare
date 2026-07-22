@@ -64,8 +64,6 @@
 
 ## 📥 Download
 
-**[⬇️ Download AnyShare-v1.3.0.apk](https://github.com/Kaifazad/AnyShare/releases/latest)**
-
 1. Download the APK from the Releases page
 2. Open the file on your Android phone
 3. Enable **"Install from unknown sources"** if prompted and install
