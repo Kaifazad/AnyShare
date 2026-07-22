@@ -27,7 +27,7 @@ import com.localshare.app.data.CrashRepository
 import com.localshare.app.data.ThemeMode
 import com.localshare.app.ui.screens.OnboardingScreen
 import com.localshare.app.ui.screens.PermissionsScreen
-import com.localshare.app.ui.theme.LocalShareTheme
+import com.localshare.app.ui.theme.AnyShareTheme
 
 /**
  * Main activity hosting the Compose UI.
@@ -57,7 +57,7 @@ class FileShareActivity : ComponentActivity() {
             // Track whether permissions have been requested this session
             var permissionsRequested by androidx.compose.runtime.mutableStateOf(hasStoragePermission())
 
-            LocalShareTheme(
+            AnyShareTheme(
                 darkTheme = useDarkTheme,
                 colorPalette = settings.colorPalette,
                 amoledMode = settings.amoledMode,
@@ -86,7 +86,7 @@ class FileShareActivity : ComponentActivity() {
                             }
                             // Normal app flow
                             else -> {
-                                LocalShareApp(viewModel = viewModel)
+                                AnyShareApp(viewModel = viewModel)
                             }
                         }
                     }
@@ -155,7 +155,7 @@ class FileShareActivity : ComponentActivity() {
             // Show a toast on the main thread before dying
             try {
                 Handler(Looper.getMainLooper()).post {
-                    Toast.makeText(applicationContext, "LocalShare crashed. Report saved.", Toast.LENGTH_LONG).show()
+                    Toast.makeText(applicationContext, "AnyShare crashed. Report saved.", Toast.LENGTH_LONG).show()
                 }
                 Thread.sleep(2000)
             } catch (_: Exception) { }

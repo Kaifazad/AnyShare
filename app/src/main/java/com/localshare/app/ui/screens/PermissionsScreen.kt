@@ -170,7 +170,7 @@ fun PermissionsScreen(
 
         // Subtitle
         Text(
-            text = "LocalShare needs a few permissions to share files and keep the server running in the background.",
+            text = "AnyShare needs a few permissions to share files and keep the server running in the background.",
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant,

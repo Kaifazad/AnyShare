@@ -51,7 +51,7 @@ class InstallActivity : ComponentActivity() {
         } catch (e: Exception) {
             Toast.makeText(
                 this,
-                "Cannot open installer. Enable 'Install unknown apps' for LocalShare in Settings.",
+                "Cannot open installer. Enable 'Install unknown apps' for AnyShare in Settings.",
                 Toast.LENGTH_LONG
             ).show()
             try {

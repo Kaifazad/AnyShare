@@ -12,7 +12,7 @@ object WebUI {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>LocalShare</title>
+<title>AnyShare</title>
 <link id="favicon" rel="icon" type="image/png" href="/logo-dark.png">
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
@@ -248,7 +248,7 @@ main { padding: 24px; flex-grow: 1; max-width: 1400px; margin: 0 auto; width: 10
 <div class="modal-overlay" id="authScreen">
     <div class="modal-content">
         <img id="lockLogo" src="/logo-dark.png" alt="Logo">
-        <h1 style="margin-top: 16px; margin-bottom: 8px; color: var(--text);">LocalShare</h1>
+        <h1 style="margin-top: 16px; margin-bottom: 8px; color: var(--text);">AnyShare</h1>
         <h2 style="margin-top: 0; color: var(--text-sec);">Secured Access</h2>
         <input type="password" class="pin-input" id="pinInput" placeholder="••••" maxlength="8">
         <button class="btn primary" onclick="submitAuth()" style="width:100%">Unlock</button>
@@ -260,7 +260,7 @@ main { padding: 24px; flex-grow: 1; max-width: 1400px; margin: 0 auto; width: 10
     <header>
         <div class="brand">
             <img id="headerLogo" src="/logo-dark.png" alt="Logo">
-            LocalShare
+            AnyShare
         </div>
         <div class="header-actions">
             <div class="status-indicator">
@@ -598,7 +598,7 @@ async function downloadSelected() {
     } else {
         const ids = Array.from(selectedIds).join(',');
         if (encryptionKey) {
-            await decryptAndDownloadZip(ids, 'LocalShare.zip');
+            await decryptAndDownloadZip(ids, 'AnyShare.zip');
         } else {
             window.location.href = `/api/download-zip?ids=${D}{ids}`;
         }

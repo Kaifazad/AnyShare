@@ -143,7 +143,7 @@ fun BugReportScreen(
                             onClick = {
                                 val intent = Intent(
                                     Intent.ACTION_VIEW,
-                                    Uri.parse("https://github.com/Kaifazad/LocalShare/issues/new/choose")
+                                    Uri.parse("https://github.com/Kaifazad/AnyShare/issues/new/choose")
                                 )
                                 context.startActivity(intent)
                             },
@@ -242,7 +242,7 @@ fun BugReportScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Have an idea to improve LocalShare? We would love to hear it! Open a GitHub Issue with the \"Feature Request\" template.",
+                        text = "Have an idea to improve AnyShare? We would love to hear it! Open a GitHub Issue with the \"Feature Request\" template.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -251,7 +251,7 @@ fun BugReportScreen(
                         onClick = {
                             val intent = Intent(
                                 Intent.ACTION_VIEW,
-                                Uri.parse("https://github.com/Kaifazad/LocalShare/issues/new/choose")
+                                Uri.parse("https://github.com/Kaifazad/AnyShare/issues/new/choose")
                             )
                             context.startActivity(intent)
                         },

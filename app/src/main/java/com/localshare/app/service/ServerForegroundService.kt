@@ -306,10 +306,10 @@ class ServerForegroundService : Service() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "LocalShare Server",
+                "AnyShare Server",
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
-                description = "Shows when LocalShare server is running"
+                description = "Shows when AnyShare server is running"
                 setShowBadge(false)
             }
 

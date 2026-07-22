@@ -63,7 +63,7 @@ fun OnboardingScreen(onComplete: () -> Unit) {
     val pages = listOf(
         OnboardingPage(
             icon = Icons.Rounded.WifiTethering,
-            title = "Welcome to LocalShare",
+            title = "Welcome to AnyShare",
             description = "Share files instantly across devices on your Wi-Fi network. No internet needed.",
             iconTint = Color(0xFF4285F4),
             showLogo = true
@@ -218,7 +218,7 @@ private fun OnboardingPageContent(page: OnboardingPage) {
             // App logo
             Image(
                 painter = painterResource(id = R.drawable.logo),
-                contentDescription = "LocalShare Logo",
+                contentDescription = "AnyShare Logo",
                 modifier = Modifier.size(120.dp)
             )
 

@@ -317,7 +317,7 @@ fun HomeScreen(viewModel: FileShareViewModel, onFilesShared: () -> Unit = {}) {
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = "Welcome to LocalShare",
+                        text = "Welcome to AnyShare",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )

@@ -16,7 +16,7 @@ import java.io.File
 
 object UpdateManager {
 
-    const val UPDATE_APK_FILENAME = "LocalShare_update.apk"
+    const val UPDATE_APK_FILENAME = "AnyShare_update.apk"
 
     fun canInstallFromThisContext(context: Context): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -123,7 +123,7 @@ object UpdateManager {
      */
     fun launchInstaller(context: Context, downloadId: Long) {
         if (!canInstallFromThisContext(context)) {
-            Toast.makeText(context, "Allow installs from LocalShare in Settings first", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, "Allow installs from AnyShare in Settings first", Toast.LENGTH_LONG).show()
             requestInstallPermission(context)
             return
         }

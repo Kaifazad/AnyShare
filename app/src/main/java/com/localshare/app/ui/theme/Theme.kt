@@ -83,14 +83,14 @@ val GoogleSansRounded = FontFamily(
 
 // ─── Custom Color Palette ─────────────────────────────────────────
 
-// Minimalist Dark Theme (LocalShare default)
+// Minimalist Dark Theme (AnyShare default)
 val DarkBg = Color(0xFF000000)
 val DarkSurface = Color(0xFF0A0A0A)
 val DarkSurfaceVariant = Color(0xFF141414)
 val DarkOnSurface = Color(0xFFE0E0E0)
 val DarkOnSurfaceVariant = Color(0xFFA0A0A0)
 
-// Minimalist Light Theme (LocalShare default)
+// Minimalist Light Theme (AnyShare default)
 val LightBg = Color(0xFFFFFFFF)
 val LightSurface = Color(0xFFF5F5F5)
 val LightSurfaceVariant = Color(0xFFEBEBEB)
@@ -103,9 +103,9 @@ val AccentPrimaryLight = Color(0xFF2C2C2C) // Soft black
 
 val ErrorRed = Color(0xFFCF6679)
 
-// ─── Color Schemes: LocalShare (Original Minimalist) ──────────────
+// ─── Color Schemes: AnyShare (Original Minimalist) ──────────────
 
-private val LocalShareDarkScheme = darkColorScheme(
+private val AnyShareDarkScheme = darkColorScheme(
     primary = AccentPrimaryDark,
     onPrimary = Color.Black,
     primaryContainer = DarkSurfaceVariant,
@@ -128,7 +128,7 @@ private val LocalShareDarkScheme = darkColorScheme(
     outlineVariant = Color(0xFF1F1F1F)
 )
 
-private val LocalShareLightScheme = lightColorScheme(
+private val AnyShareLightScheme = lightColorScheme(
     primary = AccentPrimaryLight,
     onPrimary = Color.White,
     primaryContainer = LightSurfaceVariant,
@@ -360,7 +360,7 @@ fun isDarkTheme(): Boolean {
 fun getColorScheme(palette: ColorPalette, darkTheme: Boolean): androidx.compose.material3.ColorScheme? {
     return when (palette) {
         ColorPalette.SYSTEM -> null // Caller should use dynamic color
-        ColorPalette.LOCALSHARE -> if (darkTheme) LocalShareDarkScheme else LocalShareLightScheme
+        ColorPalette.LOCALSHARE -> if (darkTheme) AnyShareDarkScheme else AnyShareLightScheme
         ColorPalette.OCEAN -> if (darkTheme) OceanDarkScheme else OceanLightScheme
         ColorPalette.EMERALD -> if (darkTheme) EmeraldDarkScheme else EmeraldLightScheme
         ColorPalette.SUNSET -> if (darkTheme) SunsetDarkScheme else SunsetLightScheme
@@ -513,7 +513,7 @@ private fun buildColorScheme(
 
 // ─── Typography (Outfit — Rounded, Modern) ────────────────────────
 
-val LocalShareTypography = Typography(
+val AnyShareTypography = Typography(
     displayLarge = TextStyle(
         fontFamily = GoogleSansRounded,
         fontWeight = FontWeight.Bold,
@@ -623,7 +623,7 @@ val LocalShareTypography = Typography(
 
 // ─── M3 Expressive Shapes ─────────────────────────────────────────
 
-val LocalShareShapes = Shapes(
+val AnyShareShapes = Shapes(
     extraSmall = RoundedCornerShape(8.dp),
     small = RoundedCornerShape(12.dp),
     medium = RoundedCornerShape(16.dp),
@@ -634,7 +634,7 @@ val LocalShareShapes = Shapes(
 // ─── Theme Composable ─────────────────────────────────────────────
 
 @Composable
-fun LocalShareTheme(
+fun AnyShareTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     colorPalette: ColorPalette = ColorPalette.SYSTEM,
     amoledMode: Boolean = false,
@@ -649,7 +649,7 @@ fun LocalShareTheme(
             themeColorSeed != "system" && themeColorSeed != "neutral" -> {
                 val seedArgb = themeColorSeed.toLongOrNull(16)?.toInt()
                 if (seedArgb != null) colorSchemeFromSeed(seedArgb, darkTheme, amoledMode)
-                else if (darkTheme) LocalShareDarkScheme.maybeAmoled(amoledMode) else LocalShareLightScheme
+                else if (darkTheme) AnyShareDarkScheme.maybeAmoled(amoledMode) else AnyShareLightScheme
             }
             // User selected neutral/greyscale
             themeColorSeed == "neutral" -> neutralColorScheme(darkTheme, amoledMode)
@@ -663,7 +663,7 @@ fun LocalShareTheme(
                 val scheme = getColorScheme(
                     if (colorPalette == ColorPalette.SYSTEM) ColorPalette.LOCALSHARE else colorPalette,
                     darkTheme
-                ) ?: (if (darkTheme) LocalShareDarkScheme else LocalShareLightScheme)
+                ) ?: (if (darkTheme) AnyShareDarkScheme else AnyShareLightScheme)
                 if (darkTheme && amoledMode) scheme.maybeAmoled(true) else scheme
             }
         }
@@ -685,8 +685,8 @@ fun LocalShareTheme(
 
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = LocalShareTypography,
-        shapes = LocalShareShapes,
+        typography = AnyShareTypography,
+        shapes = AnyShareShapes,
         content = content
     )
 }

@@ -111,7 +111,7 @@ val screens = listOf(Screen.Send, Screen.SharedFiles, Screen.Settings)
 // ─── Main App Composable ───────────────────────────────────────────
 
 @Composable
-fun LocalShareApp(viewModel: FileShareViewModel = viewModel()) {
+fun AnyShareApp(viewModel: FileShareViewModel = viewModel()) {
     val rootNavController = rememberNavController()
 
     NavHost(

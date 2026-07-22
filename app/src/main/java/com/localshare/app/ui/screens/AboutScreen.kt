@@ -107,7 +107,7 @@ fun AboutScreen(onBackClick: () -> Unit) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Image(
                             painter = painterResource(id = R.drawable.logo),
-                            contentDescription = "LocalShare Logo",
+                            contentDescription = "AnyShare Logo",
                             modifier = Modifier
                                 .size(72.dp)
                                 .clip(RoundedCornerShape(20.dp))
@@ -164,7 +164,7 @@ fun AboutScreen(onBackClick: () -> Unit) {
                     // GitHub link
                     SocialLinkCard(
                         title = "GitHub",
-                        subtitle = "Kaifazad/LocalShare",
+                        subtitle = "Kaifazad/AnyShare",
                         gradient = Brush.linearGradient(
                             listOf(Color(0xFF2D2D2D), Color(0xFF1A1A1A))
                         ),
@@ -178,7 +178,7 @@ fun AboutScreen(onBackClick: () -> Unit) {
                         },
                         onClick = {
                             context.startActivity(
-                                Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/Kaifazad/LocalShare"))
+                                Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/Kaifazad/AnyShare"))
                             )
                         }
                     )
@@ -256,11 +256,11 @@ fun AboutScreen(onBackClick: () -> Unit) {
 
             InfoItemCard(
                 icon = Icons.Rounded.Star,
-                title = "Rate LocalShare",
+                title = "Rate AnyShare",
                 subtitle = "Star us on GitHub",
                 onClick = {
                     context.startActivity(
-                        Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/Kaifazad/LocalShare"))
+                        Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/Kaifazad/AnyShare"))
                     )
                 }
             )
@@ -270,14 +270,14 @@ fun AboutScreen(onBackClick: () -> Unit) {
             InfoItemCard(
                 icon = Icons.Rounded.Share,
                 title = "Share App",
-                subtitle = "Recommend LocalShare to others",
+                subtitle = "Recommend AnyShare to others",
                 onClick = {
                     val sendIntent = Intent().apply {
                         action = Intent.ACTION_SEND
                         type = "text/plain"
-                        putExtra(Intent.EXTRA_TEXT, "Check out LocalShare - fast file sharing over Wi-Fi!\nhttps://github.com/Kaifazad/LocalShare")
+                        putExtra(Intent.EXTRA_TEXT, "Check out AnyShare - fast file sharing over Wi-Fi!\nhttps://github.com/Kaifazad/AnyShare")
                     }
-                    context.startActivity(Intent.createChooser(sendIntent, "Share LocalShare"))
+                    context.startActivity(Intent.createChooser(sendIntent, "Share AnyShare"))
                 }
             )
 

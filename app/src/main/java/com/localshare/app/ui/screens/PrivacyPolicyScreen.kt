@@ -70,12 +70,12 @@ fun PrivacyPolicyScreen(onBack: () -> Unit) {
 
             PrivacySection(
                 title = "1. Overview",
-                content = "LocalShare is an offline file sharing application designed to transfer files between devices on the same local network. We are committed to protecting your privacy."
+                content = "AnyShare is an offline file sharing application designed to transfer files between devices on the same local network. We are committed to protecting your privacy."
             )
 
             PrivacySection(
                 title = "2. Data Collection",
-                content = "LocalShare is designed with privacy as a core principle:\n\n" +
+                content = "AnyShare is designed with privacy as a core principle:\n\n" +
                     "\u2022 No data is sent to external servers. All file transfers happen directly between devices on your local network.\n" +
                     "\u2022 No analytics or tracking. The app does not collect usage statistics or personal data.\n" +
                     "\u2022 No account required. No registration, login, or account creation.\n" +
@@ -84,7 +84,7 @@ fun PrivacyPolicyScreen(onBack: () -> Unit) {
 
             PrivacySection(
                 title = "3. File Access",
-                content = "To share files, LocalShare requires access to your device storage. This access is used solely to:\n\n" +
+                content = "To share files, AnyShare requires access to your device storage. This access is used solely to:\n\n" +
                     "\u2022 Browse and select files you explicitly choose to share.\n" +
                     "\u2022 Generate thumbnails for file preview in the web UI.\n\n" +
                     "Files are only accessible when you explicitly share them."
@@ -92,7 +92,7 @@ fun PrivacyPolicyScreen(onBack: () -> Unit) {
 
             PrivacySection(
                 title = "4. Network Communication",
-                content = "LocalShare creates a local HTTP server on your device:\n\n" +
+                content = "AnyShare creates a local HTTP server on your device:\n\n" +
                     "\u2022 Only listens on your local network (Wi-Fi or hotspot).\n" +
                     "\u2022 Does not communicate with any external servers.\n" +
                     "\u2022 Can be protected with an optional PIN code.\n" +
@@ -101,7 +101,7 @@ fun PrivacyPolicyScreen(onBack: () -> Unit) {
 
             PrivacySection(
                 title = "5. Notifications",
-                content = "LocalShare may request notification permission to inform you about:\n\n" +
+                content = "AnyShare may request notification permission to inform you about:\n\n" +
                     "\u2022 Server status (running/stopped).\n" +
                     "\u2022 File access events."
             )

@@ -1673,7 +1673,7 @@ fun WidgetInfoContent(paddingValues: PaddingValues) {
             fontWeight = FontWeight.Bold
         )
         Text(
-            text = "Add the LocalShare widget to your home screen for quick access.",
+            text = "Add the AnyShare widget to your home screen for quick access.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -1709,7 +1709,7 @@ fun WidgetInfoContent(paddingValues: PaddingValues) {
                 Spacer(modifier = Modifier.height(12.dp))
                 StepItem("1", "Long-press on your home screen")
                 StepItem("2", "Tap \"Widgets\" in the menu")
-                StepItem("3", "Find \"LocalShare\" in the widget list")
+                StepItem("3", "Find \"AnyShare\" in the widget list")
                 StepItem("4", "Drag it to your home screen")
             }
         }
@@ -2043,7 +2043,7 @@ fun UpdatesContent(
                             )
                             Text("Check for updates", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.titleMedium)
                             Text(
-                                "See if a newer version of LocalShare is available.",
+                                "See if a newer version of AnyShare is available.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = TextAlign.Center

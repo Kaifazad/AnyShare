@@ -14,7 +14,7 @@ data class UpdateInfo(
 )
 
 object UpdateChecker {
-    private const val GITHUB_API_URL = "https://api.github.com/repos/Kaifazad/LocalShare/releases/latest"
+    private const val GITHUB_API_URL = "https://api.github.com/repos/Kaifazad/AnyShare/releases/latest"
 
     suspend fun checkForUpdate(currentVersion: String): UpdateInfo? = withContext(Dispatchers.IO) {
         try {

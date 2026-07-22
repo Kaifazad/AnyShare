@@ -1463,7 +1463,7 @@ class FileShareServer(
                 Response.Status.OK, "application/octet-stream",
                 ByteArrayInputStream(encryptedBytes), encryptedBytes.size.toLong()
             )
-            res.addHeader("Content-Disposition", "attachment; filename=\"LocalShare.zip\"")
+            res.addHeader("Content-Disposition", "attachment; filename=\"AnyShare.zip\"")
             res.addHeader("X-Encrypted", "aes-256-gcm")
             res.addHeader("Access-Control-Allow-Origin", "*")
             return res
@@ -1508,7 +1508,7 @@ class FileShareServer(
             }
 
             val res = newChunkedResponse(Response.Status.OK, "application/zip", pis)
-            res.addHeader("Content-Disposition", "attachment; filename=\"LocalShare.zip\"")
+            res.addHeader("Content-Disposition", "attachment; filename=\"AnyShare.zip\"")
             res.addHeader("Access-Control-Allow-Origin", "*")
             return res
         }
