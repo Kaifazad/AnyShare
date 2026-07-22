@@ -113,7 +113,7 @@ Contributions, issues, and feature requests are welcome! Check the [issues page]
 **Kaif Azad**
 - GitHub: [@Kaifazad](https://github.com/Kaifazad)
 - Instagram: [@kaif.azad](https://instagram.com/kaif.azad)
-- Website: [anyshare.kaifazad.in](https://anyshare.kaifazad.in)
+- Website: [kaifazad.in](https://kaifazad.in)
 
 ---
 
