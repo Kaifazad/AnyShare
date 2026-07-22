@@ -1,13 +1,13 @@
 <div align="center">
-  <img src="app/src/main/res/drawable/logo.png" alt="LocalShare Logo" width="120"/>
-  <h1>LocalShare</h1>
-  <p><strong>Blazing-fast, offline file sharing for Android — no internet, no cloud, no tracking.</strong></p>
+  <img src="app/src/main/res/drawable/logo.png" alt="AnyShare Logo" width="120"/>
+  <h1>AnyShare - Stream</h1>
+  <p><strong>Blazing-fast, offline file sharing for Android — no internet, no cloud, no tracking. Stream your movies locally.</strong></p>
 
   <p>
-    <a href="https://github.com/Kaifazad/LocalShare/releases/latest"><img src="https://img.shields.io/github/v/release/Kaifazad/LocalShare?style=for-the-badge&color=00BFA5" alt="Latest Release"/></a>
+    <a href="https://github.com/Kaifazad/AnyShare/releases/latest"><img src="https://img.shields.io/github/v/release/Kaifazad/AnyShare?style=for-the-badge&color=00BFA5" alt="Latest Release"/></a>
     <img src="https://img.shields.io/badge/Platform-Android%208.0%2B-3DDC84?style=for-the-badge&logo=android" alt="Platform: Android 8.0+"/>
     <img src="https://img.shields.io/badge/Language-Kotlin-7F52FF?style=for-the-badge&logo=kotlin" alt="Language: Kotlin"/>
-    <img src="https://img.shields.io/github/license/Kaifazad/LocalShare?style=for-the-badge&color=blue" alt="License: MIT"/>
+    <img src="https://img.shields.io/github/license/Kaifazad/AnyShare?style=for-the-badge&color=blue" alt="License: MIT"/>
   </p>
 
   <a href="https://github.com/Kaifazad/LocalShare/releases/latest">

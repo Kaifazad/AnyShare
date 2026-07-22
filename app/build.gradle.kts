@@ -21,11 +21,11 @@ android {
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.localshare.app"
+        applicationId = "com.anyshare.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 5
-        versionName = "1.4.0"
+        versionCode = 1
+        versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
