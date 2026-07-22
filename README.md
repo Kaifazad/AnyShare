@@ -13,7 +13,7 @@
   <p>
     <img src="https://img.shields.io/badge/Platform-Android%208.0%2B-3DDC84?style=for-the-badge&logo=android" alt="Platform: Android 8.0+"/>
     <img src="https://img.shields.io/badge/Language-Kotlin-7F52FF?style=for-the-badge&logo=kotlin" alt="Language: Kotlin"/>
-    <img src="https://img.shields.io/github/license/Kaifazad/AnyShare?style=for-the-badge&color=blue" alt="License: MIT"/>
+    <img src="https://img.shields.io/github/license/Kaifazad/AnyShare?style=for-the-badge&color=blue" alt="License: Apache 2.0"/>
   </p>
 </div>
 
