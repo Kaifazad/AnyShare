@@ -73,7 +73,7 @@ export default function Home() {
       <nav className={styles.nav}>
         <div className={styles.navInner}>
           <Link href="/" className={styles.navLogo}>
-            <span className={styles.navLogoIcon}>LS</span>
+            <img src="/logo.png" alt="AnyShare Logo" width="32" height="32" style={{ marginRight: '8px' }} />
             <span>AnyShare</span>
           </Link>
           <div className={styles.navLinks}>
