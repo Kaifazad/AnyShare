@@ -1,0 +1,28 @@
+*.iml
+.gradle
+/local.properties
+/.idea
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+/app/build
+*.refactor
+.vscode
+*.jks
+/app/release
+
+# Release binaries & local design dumps (keep repo lean)
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# AI agent & skill tool directories (local only, not for source control)
+.agents/
+gstack/
+.gemini/
+scratch/
+*.py
