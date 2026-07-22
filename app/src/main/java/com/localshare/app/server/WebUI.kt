@@ -473,25 +473,33 @@ async function fetchKey() {
     } catch(e) {}
 }
 
+
 function getIconForType(typeIcon) {
-    const map = {
-        'video': '🎥', 'image': '🖼️', 'audio': '🎵', 
-        'document': '📄', 'pdf': '📕', 'archive': '📦', 
-        'android': '🤖', 'folder': '📁', 'file': '📎'
+    const icons = {
+        'pdf': '<svg viewBox="0 0 48 48" width="48" height="48"><rect x="8" y="2" width="32" height="44" rx="4" fill="#e53935"/><path d="M14 30h20M14 36h14" stroke="#fff" stroke-width="2" stroke-linecap="round"/><text x="24" y="22" text-anchor="middle" font-size="12" font-weight="bold" fill="#fff">PDF</text></svg>',
+        'document': '<svg viewBox="0 0 48 48" width="48" height="48"><rect x="8" y="2" width="32" height="44" rx="4" fill="#1e88e5"/><path d="M14 16h20M14 22h20M14 28h16M14 34h12" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>',
+        'archive': '<svg viewBox="0 0 48 48" width="48" height="48"><rect x="8" y="2" width="32" height="44" rx="4" fill="#f9a825"/><rect x="20" y="8" width="8" height="4" rx="1" fill="#fff" opacity=".7"/><rect x="20" y="14" width="8" height="4" rx="1" fill="#fff" opacity=".7"/><rect x="20" y="20" width="8" height="4" rx="1" fill="#fff" opacity=".7"/><rect x="18" y="26" width="12" height="14" rx="2" fill="#fff" opacity=".8"/><circle cx="24" cy="33" r="2" fill="#f9a825"/></svg>',
+        'audio': '<svg viewBox="0 0 48 48" width="48" height="48"><rect x="8" y="2" width="32" height="44" rx="4" fill="#7b1fa2"/><circle cx="24" cy="26" r="8" fill="none" stroke="#fff" stroke-width="2"/><circle cx="24" cy="26" r="3" fill="#fff"/><path d="M24 18v-6" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>',
+        'video': '<svg viewBox="0 0 48 48" width="48" height="48"><rect x="8" y="2" width="32" height="44" rx="4" fill="#00897b"/><polygon points="20,18 32,26 20,34" fill="#fff"/></svg>',
+        'image': '<svg viewBox="0 0 48 48" width="48" height="48"><rect x="8" y="2" width="32" height="44" rx="4" fill="#43a047"/><circle cx="18" cy="16" r="4" fill="#fff" opacity=".8"/><path d="M8 34l10-10 6 6 8-8 8 8v10a4 4 0 0 1-4 4H12a4 4 0 0 1-4-4z" fill="#fff" opacity=".5"/></svg>',
+        'android': '<svg viewBox="0 0 48 48" width="48" height="48"><rect x="8" y="2" width="32" height="44" rx="4" fill="#4caf50"/><path d="M16 28h16v8a4 4 0 0 1-4 4h-8a4 4 0 0 1-4-4z" fill="#fff" opacity=".8"/><circle cx="20" cy="22" r="2" fill="#fff"/><circle cx="28" cy="22" r="2" fill="#fff"/></svg>',
+        'folder': '<svg viewBox="0 0 48 48" width="48" height="48"><path d="M6 12a4 4 0 0 1 4-4h10l4 4h14a4 4 0 0 1 4 4v24a4 4 0 0 1-4 4H10a4 4 0 0 1-4-4z" fill="#ffa726"/></svg>',
+        'file': '<svg viewBox="0 0 48 48" width="48" height="48"><rect x="8" y="2" width="32" height="44" rx="4" fill="#78909c"/><path d="M14 16h20M14 22h20M14 28h16" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>'
     };
-    return map[typeIcon] || '📎';
+    return icons[typeIcon] || icons['file'];
 }
 
 function renderGrid() {
     const grid = document.getElementById('grid');
     grid.innerHTML = filesData.map((f, index) => {
         const isSelected = selectedIds.has(f.id);
-        const hasThumbnail = f.typeIcon === 'image' || f.typeIcon === 'video' || f.typeIcon === 'pdf' || f.typeIcon === 'android';
+        const hasThumbnail = f.typeIcon === 'image' || f.typeIcon === 'video' || f.typeIcon === 'android';
         
         let previewHtml = `<div class="file-icon">${D}{getIconForType(f.typeIcon)}</div>`;
         if (hasThumbnail) {
             let thumbUrl = f.typeIcon === 'android' ? `/api/icon/${D}{f.id}` : `/api/thumbnail/${D}{f.id}`;
-            previewHtml = `<img src="${D}{thumbUrl}" loading="lazy" onerror="this.outerHTML='<div class=\'file-icon\'>${D}{getIconForType(f.typeIcon)}</div>'">`;
+            let fallbackIcon = getIconForType(f.typeIcon).replace(/"/g, '&quot;');
+            previewHtml = `<img src="${D}{thumbUrl}" loading="lazy" onerror="this.outerHTML='<div class=&quot;file-icon&quot;>${D}{fallbackIcon}</div>'">`;
         }
         
         let showPlay = f.isStreamable && (f.mimeType.startsWith('video/') || f.mimeType.startsWith('audio/'));
