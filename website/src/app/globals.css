@@ -1,0 +1,55 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Syne:wght@500;600;700;800&display=swap');
+
+:root {
+  --canvas:   #fffaf0;
+  --ink:      #0a0a0a;
+  --ink-2:    #3a3a3a;
+  --ink-3:    #7a7a7a;
+  --border:   rgba(10, 10, 10, 0.08);
+  --border-strong: rgba(10, 10, 10, 0.16);
+
+  /* Saturated feature card fills */
+  --card-pink:    #f7c5d5;
+  --card-teal:    #b2e8e0;
+  --card-lavender:#d4c5f9;
+  --card-peach:   #ffd6b3;
+  --card-ochre:   #f5e5a0;
+  --card-mint:    #bfedd4;
+
+  --accent: #0a0a0a;
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html, body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  background-color: var(--canvas);
+  color: var(--ink);
+  font-family: 'Inter', system-ui, sans-serif;
+  line-height: 1.6;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Shared card */
+.surface-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 2rem;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  box-shadow: 0 2px 8px rgba(10, 10, 10, 0.04);
+}
+
+.surface-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px rgba(10, 10, 10, 0.08);
+}
