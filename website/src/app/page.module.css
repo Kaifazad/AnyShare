@@ -5,6 +5,7 @@
   flex-direction: column;
   background: var(--canvas);
   overflow-x: hidden;
+  width: 100%;
 }
 
 /* ── NAV ── */
@@ -30,10 +31,10 @@
 .navLogo {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.65rem;
   font-family: 'Syne', sans-serif;
   font-weight: 700;
-  font-size: 1.1rem;
+  font-size: 1.15rem;
   color: var(--ink);
   letter-spacing: -0.02em;
   flex-shrink: 0;
@@ -41,8 +42,11 @@
 }
 .navLogoImg {
   display: block;
+  width: 32px;
+  height: 32px;
   border-radius: 8px;
   flex-shrink: 0;
+  object-fit: contain;
 }
 .navLinks {
   display: flex;
@@ -61,44 +65,44 @@
 .navCta {
   background: var(--ink) !important;
   color: var(--canvas) !important;
-  padding: 0.5rem 1.1rem;
-  border-radius: 10px;
-  font-weight: 600;
+  padding: 0.45rem 1rem !important;
+  border-radius: 8px !important;
+  font-weight: 600 !important;
   font-size: 0.85rem !important;
-  text-decoration: none !important;
-  transition: opacity 0.2s !important;
+  transition: opacity 0.15s !important;
 }
-.navCta:hover { opacity: 0.8; }
+.navCta:hover { opacity: 0.85; }
+
+/* Hamburger button (mobile only) */
 .hamburger {
   display: none;
   background: none;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 6px 8px;
+  border: none;
   cursor: pointer;
+  padding: 0.25rem;
   color: var(--ink);
-  align-items: center;
-  justify-content: center;
 }
+
+/* Mobile dropdown menu */
 .mobileMenu {
   display: flex;
   flex-direction: column;
-  background: rgba(255, 250, 240, 0.98);
-  border-top: 1px solid var(--border);
-  padding: 0.5rem 1.5rem 1.25rem;
+  padding: 1rem 1.5rem 1.5rem;
+  background: var(--canvas);
+  border-bottom: 1px solid var(--border);
+  gap: 0.875rem;
 }
 .mobileMenu a {
-  display: block;
-  padding: 0.75rem 0;
-  color: var(--ink-2);
+  color: var(--ink);
   font-weight: 500;
-  font-size: 0.95rem;
+  font-size: 1rem;
+  padding: 0.5rem 0;
   border-bottom: 1px solid var(--border);
   text-decoration: none;
-  transition: color 0.15s;
 }
-.mobileMenu a:last-child { border-bottom: none; margin-top: 0.5rem; }
-.mobileMenu a:hover { color: var(--ink); }
+.mobileMenu a:last-child {
+  border-bottom: none;
+}
 .mobileMenu .navCta {
   text-align: center;
   padding: 0.75rem !important;
@@ -112,7 +116,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 4rem 2rem;
+  padding: 3rem 1.5rem;
   max-width: 1200px;
   margin: 0 auto;
   width: 100%;
@@ -121,10 +125,10 @@
 /* ── HERO ── */
 .hero {
   text-align: center;
-  margin-top: 3rem;
-  margin-bottom: 7rem;
+  margin-top: 2rem;
+  margin-bottom: 6rem;
   width: 100%;
-  max-width: 860px;
+  max-width: 1100px;
 }
 .heroBadge {
   display: inline-block;
@@ -134,48 +138,51 @@
   border-radius: 50px;
   font-size: 0.75rem;
   font-weight: 600;
-  margin-bottom: 2rem;
+  margin-bottom: 1.75rem;
   border: 1px solid var(--border-strong);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
-/* Hero heading — two lines, different styles */
+/* Hero heading - two lines filling the space nicely */
 .heroHeading {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: 1.5rem;
-  gap: 0;
+  margin-bottom: 1.75rem;
+  width: 100%;
+  gap: 0.15rem;
 }
 .heroLine1 {
   font-family: 'Syne', sans-serif;
-  font-size: clamp(3rem, 9vw, 6rem);
+  font-size: clamp(3.2rem, 8.5vw, 6.8rem);
   font-weight: 800;
-  letter-spacing: -0.05em;
+  letter-spacing: -0.04em;
   color: var(--ink);
-  line-height: 1.0;
+  line-height: 1.02;
+  display: block;
 }
 .heroLine2 {
   font-family: 'Syne', sans-serif;
-  font-size: clamp(3rem, 9vw, 6rem);
+  font-size: clamp(2.4rem, 6.8vw, 5.5rem);
   font-weight: 800;
-  letter-spacing: -0.05em;
+  letter-spacing: -0.04em;
   color: var(--canvas);
-  line-height: 1.0;
-  -webkit-text-stroke: 2px var(--ink);
-  text-stroke: 2px var(--ink);
+  line-height: 1.02;
+  display: block;
+  -webkit-text-stroke: 2.5px var(--ink);
+  text-stroke: 2.5px var(--ink);
 }
 
 .heroSubtitle {
-  font-size: clamp(1rem, 2.2vw, 1.15rem);
+  font-size: clamp(1.05rem, 2vw, 1.2rem);
   color: var(--ink-2);
   margin-bottom: 2.5rem;
   font-weight: 400;
-  max-width: 540px;
+  max-width: 680px;
   margin-left: auto;
   margin-right: auto;
-  line-height: 1.8;
+  line-height: 1.75;
 }
 
 /* Stat pills row */
@@ -184,15 +191,15 @@
   justify-content: center;
   flex-wrap: wrap;
   gap: 0.625rem;
-  margin-top: 2rem;
+  margin-top: 2.5rem;
 }
 .heroPill {
   background: #fff;
   border: 1px solid var(--border-strong);
   color: var(--ink-2);
-  padding: 0.35rem 0.875rem;
+  padding: 0.4rem 1rem;
   border-radius: 50px;
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   font-weight: 500;
 }
 
@@ -209,14 +216,14 @@
   gap: 0.5rem;
   background: var(--ink);
   color: var(--canvas);
-  padding: 0.85rem 1.75rem;
-  font-size: 0.92rem;
+  padding: 0.9rem 1.85rem;
+  font-size: 0.95rem;
   font-weight: 600;
   border-radius: 12px;
   text-decoration: none;
   transition: transform 0.2s, opacity 0.2s;
 }
-.ctaButton:hover { transform: translateY(-2px); opacity: 0.85; }
+.ctaButton:hover { transform: translateY(-2px); opacity: 0.88; }
 .secondaryButton {
   display: inline-flex;
   align-items: center;
@@ -224,8 +231,8 @@
   background: #fff;
   border: 1px solid var(--border-strong);
   color: var(--ink);
-  padding: 0.85rem 1.75rem;
-  font-size: 0.92rem;
+  padding: 0.9rem 1.85rem;
+  font-size: 0.95rem;
   font-weight: 600;
   border-radius: 12px;
   text-decoration: none;
@@ -241,7 +248,7 @@
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--ink-3);
-  margin-bottom: 1rem;
+  margin-bottom: 0.85rem;
   text-align: center;
   width: 100%;
 }
@@ -265,14 +272,14 @@
 .featuresGrid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
+  gap: 1.25rem;
 }
 .featureCard {
   border-radius: 20px;
-  padding: 1.75rem;
+  padding: 2rem 1.75rem;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.6rem;
   transition: transform 0.25s ease;
   position: relative;
   overflow: hidden;
@@ -285,12 +292,12 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--ink-2);
-  opacity: 0.6;
+  opacity: 0.65;
   margin-bottom: 0.25rem;
 }
 .featureTitle {
   font-family: 'Syne', sans-serif;
-  font-size: 1.15rem;
+  font-size: 1.2rem;
   font-weight: 700;
   color: var(--ink);
   letter-spacing: -0.02em;
@@ -299,7 +306,7 @@
   color: var(--ink-2);
   font-weight: 400;
   line-height: 1.7;
-  font-size: 0.88rem;
+  font-size: 0.9rem;
 }
 
 /* Clay palette */
@@ -318,13 +325,13 @@
 .stepsGrid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
+  gap: 1.25rem;
 }
 .stepCard {
   background: #fff;
   border: 1px solid var(--border);
   border-radius: 20px;
-  padding: 2rem 1.75rem;
+  padding: 2.25rem 1.75rem;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
@@ -333,15 +340,15 @@
 .stepCard:hover { transform: translateY(-3px); }
 .stepNumber {
   font-family: 'Syne', sans-serif;
-  font-size: 2.5rem;
+  font-size: 2.75rem;
   font-weight: 800;
-  color: rgba(10,10,10,0.1);
+  color: rgba(10,10,10,0.12);
   letter-spacing: -0.05em;
   line-height: 1;
 }
 .stepTitle {
   font-family: 'Syne', sans-serif;
-  font-size: 1.1rem;
+  font-size: 1.15rem;
   font-weight: 700;
   color: var(--ink);
   letter-spacing: -0.02em;
@@ -354,7 +361,7 @@
   border-radius: 24px;
   padding: 4rem 3rem;
   text-align: center;
-  max-width: 800px;
+  max-width: 860px;
   margin: 0 auto;
 }
 .openSourceLabel {
@@ -375,7 +382,7 @@
   margin-bottom: 1.25rem;
 }
 .openSourceDesc {
-  color: rgba(255,250,240,0.6);
+  color: rgba(255,250,240,0.65);
   font-size: 1rem;
   margin-bottom: 2.5rem;
   line-height: 1.75;
@@ -437,8 +444,10 @@
   .navLinks { display: none; }
   .hamburger { display: flex; }
   .navInner { padding: 0.875rem 1.25rem; }
-  .main { padding: 2rem 1.25rem; }
-  .hero { margin-top: 2rem; margin-bottom: 4rem; }
+  .main { padding: 2.5rem 1.25rem; }
+  .hero { margin-top: 1.5rem; margin-bottom: 4rem; }
+  .heroLine1 { font-size: clamp(2.6rem, 11vw, 4.2rem); }
+  .heroLine2 { font-size: clamp(2rem, 8.5vw, 3.4rem); -webkit-text-stroke: 2px var(--ink); text-stroke: 2px var(--ink); }
   .features, .howItWorks { margin-bottom: 5rem; }
   .openSourceCard { padding: 2.5rem 1.5rem; }
 }
@@ -446,8 +455,16 @@
 @media (max-width: 600px) {
   .featuresGrid { grid-template-columns: 1fr; }
   .stepsGrid { grid-template-columns: 1fr !important; }
-  .heroLine1, .heroLine2 { font-size: clamp(2.5rem, 12vw, 4rem); }
   .buttonGroup { flex-direction: column; align-items: center; }
   .ctaButton, .secondaryButton { width: 100%; justify-content: center; max-width: 320px; }
   .footerLinks { gap: 1.25rem; }
+}
+
+@media (max-width: 480px) {
+  .navInner { padding: 0.75rem 1rem; }
+  .main { padding: 2rem 1rem; }
+  .heroHeading { gap: 0.25rem; }
+  .heroLine1 { font-size: clamp(2.2rem, 11vw, 3rem); }
+  .heroLine2 { font-size: clamp(1.7rem, 8.5vw, 2.4rem); -webkit-text-stroke: 1.5px var(--ink); text-stroke: 1.5px var(--ink); }
+  .heroSubtitle { font-size: 0.95rem; line-height: 1.6; }
 }
