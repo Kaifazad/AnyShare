@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useState } from 'react';
 import styles from "./page.module.css";
 import Link from "next/link";
@@ -10,62 +10,11 @@ const DownloadIcon = () => (
     <line x1="12" y1="15" x2="12" y2="3"></line>
   </svg>
 );
-
 const GithubIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
   </svg>
 );
-
-const SpeedIcon = () => (
-  <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
-  </svg>
-);
-
-const WebIcon = () => (
-  <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="10"></circle>
-    <line x1="2" y1="12" x2="22" y2="12"></line>
-    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
-  </svg>
-);
-
-const SecureIcon = () => (
-  <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-  </svg>
-);
-
-const ShieldIcon = () => (
-  <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-  </svg>
-);
-
-const PhoneIcon = () => (
-  <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
-    <line x1="12" y1="18" x2="12.01" y2="18"></line>
-  </svg>
-);
-
-const DesignIcon = () => (
-  <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="3"></circle>
-    <path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"></path>
-  </svg>
-);
-
-const UploadIcon = () => (
-  <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="16 16 12 12 8 16"></polyline>
-    <line x1="12" y1="12" x2="12" y2="21"></line>
-    <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"></path>
-  </svg>
-);
-
 const MenuIcon = () => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <line x1="3" y1="6" x2="21" y2="6"></line>
@@ -73,7 +22,6 @@ const MenuIcon = () => (
     <line x1="3" y1="18" x2="21" y2="18"></line>
   </svg>
 );
-
 const CloseIcon = () => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -81,65 +29,117 @@ const CloseIcon = () => (
   </svg>
 );
 
+const features = [
+  {
+    color: 'featureCardPeach',
+    iconColor: 'featureIconPeach',
+    title: 'Blazing Fast',
+    desc: 'Transfers run at full Wi-Fi speed. Move a 4K video across devices in seconds — no compression, no limits.',
+    stat: 'Up to 1 Gbps',
+  },
+  {
+    color: 'featureCardTeal',
+    iconColor: 'featureIconTeal',
+    title: 'No App Needed',
+    desc: 'The receiving device just opens a browser. Laptops, iPhones, tablets — everything works out of the box.',
+    stat: 'Any browser',
+  },
+  {
+    color: 'featureCardLavender',
+    iconColor: 'featureIconLavender',
+    title: 'PIN Protected',
+    desc: 'Lock your server with a PIN so only trusted devices can connect. Your files, your control.',
+    stat: 'Optional PIN',
+  },
+  {
+    color: 'featureCardMint',
+    iconColor: 'featureIconMint',
+    title: 'AES-256 Encrypted',
+    desc: 'End-to-end encrypted transfers for maximum security on shared networks. Zero data leaves your network.',
+    stat: 'AES-256-GCM',
+  },
+  {
+    color: 'featureCardPink',
+    iconColor: 'featureIconPink',
+    title: 'Clipboard Sync',
+    desc: 'Send text from your phone to any connected browser instantly. No cables, no logins, no friction.',
+    stat: 'One tap sync',
+  },
+  {
+    color: 'featureCardOchre',
+    iconColor: 'featureIconOchre',
+    title: 'Share Anything',
+    desc: 'Photos, videos, audio, docs, APKs, folders. Drag and drop from desktop. Stream media in the browser.',
+    stat: 'All file types',
+  },
+];
+
+const steps = [
+  {
+    n: '01',
+    title: 'Start the Server',
+    desc: 'Open AnyShare and tap Start. A local HTTP server starts instantly and shows you the connection URL.',
+  },
+  {
+    n: '02',
+    title: 'Connect Any Device',
+    desc: 'Join the same Wi-Fi or hotspot, then open the URL in any browser. Nothing to install on the other side.',
+  },
+  {
+    n: '03',
+    title: 'Transfer Files',
+    desc: 'Browse, preview, download, or upload. Stream video directly. Share clipboard text. Done in seconds.',
+  },
+];
+
 export default function Home() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
     <div className={styles.container}>
-      {/* NAVIGATION */}
+
+      {/* NAV */}
       <nav className={styles.nav}>
         <div className={styles.navInner}>
           <Link href="/" className={styles.navLogo}>
-            <img src="/logo.png" alt="AnyShare" width="32" height="32" style={{ borderRadius: '8px' }} />
+            <img src="/logo.png" alt="AnyShare" width="30" height="30" className={styles.navLogoImg} />
             <span>AnyShare</span>
           </Link>
-
-          {/* Desktop links */}
           <div className={styles.navLinks}>
             <a href="#features">Features</a>
             <a href="#how-it-works">How It Works</a>
             <Link href="/privacy">Privacy</Link>
             <a href="https://github.com/Kaifazad/AnyShare" target="_blank" rel="noopener noreferrer">GitHub</a>
             <a href="https://github.com/Kaifazad/AnyShare/releases/latest" target="_blank" rel="noopener noreferrer" className={styles.navCta}>
-              Download APK
+              Download
             </a>
           </div>
-
-          {/* Mobile hamburger */}
-          <button
-            className={styles.hamburger}
-            onClick={() => setMenuOpen(!menuOpen)}
-            aria-label="Toggle menu"
-          >
+          <button className={styles.hamburger} onClick={() => setMenuOpen(!menuOpen)} aria-label="Toggle menu">
             {menuOpen ? <CloseIcon /> : <MenuIcon />}
           </button>
         </div>
-
-        {/* Mobile drawer */}
         {menuOpen && (
           <div className={styles.mobileMenu}>
             <a href="#features" onClick={() => setMenuOpen(false)}>Features</a>
             <a href="#how-it-works" onClick={() => setMenuOpen(false)}>How It Works</a>
             <Link href="/privacy" onClick={() => setMenuOpen(false)}>Privacy</Link>
             <a href="https://github.com/Kaifazad/AnyShare" target="_blank" rel="noopener noreferrer" onClick={() => setMenuOpen(false)}>GitHub</a>
-            <a href="https://github.com/Kaifazad/AnyShare/releases/latest" target="_blank" rel="noopener noreferrer" className={styles.navCta} onClick={() => setMenuOpen(false)}>
-              Download APK
-            </a>
+            <a href="https://github.com/Kaifazad/AnyShare/releases/latest" target="_blank" rel="noopener noreferrer" className={styles.navCta} onClick={() => setMenuOpen(false)}>Download APK</a>
           </div>
         )}
       </nav>
 
       <main className={styles.main}>
 
-        {/* HERO SECTION */}
+        {/* HERO */}
         <section className={styles.hero}>
-          <div className={styles.heroBadge}>100% Free &amp; Open Source</div>
-          <h1>
-            Share Files.<br />
-            <span className={styles.heroHighlight}>Completely Offline.</span>
+          <div className={styles.heroBadge}>Free &amp; Open Source — Android</div>
+          <h1 className={styles.heroHeading}>
+            <span className={styles.heroLine1}>Share Files.</span>
+            <span className={styles.heroLine2}>Completely Offline.</span>
           </h1>
           <p className={styles.heroSubtitle}>
-            A blazing-fast, beautifully crafted file sharing app for Android. Share photos, videos, documents, and entire folders with any device on your network &mdash; no internet required.
+            Turn your Android phone into a local server. Share photos, videos, documents, and clipboard text with any device on your Wi-Fi — no internet, no cloud, no accounts.
           </p>
           <div className={styles.buttonGroup}>
             <a href="https://github.com/Kaifazad/AnyShare/releases/latest" target="_blank" rel="noopener noreferrer" className={styles.ctaButton}>
@@ -149,125 +149,60 @@ export default function Home() {
               <GithubIcon /> View on GitHub
             </a>
           </div>
-          <div className={styles.heroVisual}>
-            <div className={styles.heroPhone}>
-              <div className={styles.heroPhoneScreen}>
-                <div className={styles.heroPhoneHeader}>
-                  <div className={styles.heroPhoneDot}></div>
-                  <span>AnyShare</span>
-                </div>
-                <div className={styles.heroPhoneContent}>
-                  <div className={styles.heroPhoneStatus}>
-                    <div className={styles.heroPhoneStatusDot}></div>
-                    Server Running
-                  </div>
-                  <div className={styles.heroPhoneUrl}>192.168.1.5:8080</div>
-                  <div className={styles.heroPhoneFiles}>
-                    <div className={styles.heroPhoneFile}>
-                      <span>vacation.mp4</span><span>245 MB</span>
-                    </div>
-                    <div className={styles.heroPhoneFile}>
-                      <span>photo.jpg</span><span>3.2 MB</span>
-                    </div>
-                    <div className={styles.heroPhoneFile}>
-                      <span>document.pdf</span><span>1.1 MB</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+
+          {/* Stat pills */}
+          <div className={styles.heroStats}>
+            <div className={styles.heroPill}>100% Offline</div>
+            <div className={styles.heroPill}>No Cloud</div>
+            <div className={styles.heroPill}>No Account</div>
+            <div className={styles.heroPill}>Android 8.0+</div>
           </div>
         </section>
 
-        {/* FEATURES GRID */}
+        {/* FEATURES */}
         <section id="features" className={styles.features}>
-          <h2 className={styles.sectionTitle}>Why AnyShare?</h2>
+          <div className={styles.sectionLabel}>Features</div>
+          <h2 className={styles.sectionTitle}>Everything you need.<br />Nothing you don't.</h2>
           <div className={styles.featuresGrid}>
-            <div className={`${styles.featureCard} ${styles.featureCardPeach}`}>
-              <div className={`${styles.featureIcon} ${styles.featureIconPeach}`}><SpeedIcon /></div>
-              <h3 className={styles.featureTitle}>Blazing Fast</h3>
-              <p className={styles.featureDesc}>Transfer gigabytes in seconds. Uses direct local Wi-Fi or hotspot connections for maximum speed.</p>
-            </div>
-            <div className={`${styles.featureCard} ${styles.featureCardTeal}`}>
-              <div className={`${styles.featureIcon} ${styles.featureIconTeal}`}><WebIcon /></div>
-              <h3 className={styles.featureTitle}>Cross-Platform Web UI</h3>
-              <p className={styles.featureDesc}>No app needed on the other device. Just open a browser and connect. Works on laptops, iPhones, tablets, and more.</p>
-            </div>
-            <div className={`${styles.featureCard} ${styles.featureCardLavender}`}>
-              <div className={`${styles.featureIcon} ${styles.featureIconLavender}`}><SecureIcon /></div>
-              <h3 className={styles.featureTitle}>PIN Protected</h3>
-              <p className={styles.featureDesc}>Optional PIN authentication keeps your files secure. Only devices with the PIN can access shared content.</p>
-            </div>
-            <div className={`${styles.featureCard} ${styles.featureCardMint}`}>
-              <div className={`${styles.featureIcon} ${styles.featureIconMint}`}><ShieldIcon /></div>
-              <h3 className={styles.featureTitle}>Encrypted Transfers</h3>
-              <p className={styles.featureDesc}>Optional AES-256-GCM encryption for end-to-end secure file transfers. Your data never leaves your network.</p>
-            </div>
-            <div className={`${styles.featureCard} ${styles.featureCardPink}`}>
-              <div className={`${styles.featureIcon} ${styles.featureIconPink}`}><PhoneIcon /></div>
-              <h3 className={styles.featureTitle}>Share Anything</h3>
-              <p className={styles.featureDesc}>Photos, videos, audio, documents, APKs, folders, and even clipboard text. Share it all with a few taps.</p>
-            </div>
-            <div className={`${styles.featureCard} ${styles.featureCardOchre}`}>
-              <div className={`${styles.featureIcon} ${styles.featureIconOchre}`}><DesignIcon /></div>
-              <h3 className={styles.featureTitle}>Beautiful Design</h3>
-              <p className={styles.featureDesc}>Built with Jetpack Compose and Material 3. Multiple themes, dark mode, and a stunning web UI.</p>
-            </div>
-            <div className={`${styles.featureCard} ${styles.featureCardTeal}`}>
-              <div className={`${styles.featureIcon} ${styles.featureIconTeal}`}><UploadIcon /></div>
-              <h3 className={styles.featureTitle}>Drag &amp; Drop Upload</h3>
-              <p className={styles.featureDesc}>Desktop users can drag files directly into the browser to upload them to the phone. No clicking required.</p>
-            </div>
+            {features.map((f) => (
+              <div key={f.title} className={`${styles.featureCard} ${styles[f.color]}`}>
+                <p className={styles.featureStat}>{f.stat}</p>
+                <h3 className={styles.featureTitle}>{f.title}</h3>
+                <p className={styles.featureDesc}>{f.desc}</p>
+              </div>
+            ))}
           </div>
         </section>
 
         {/* HOW IT WORKS */}
         <section id="how-it-works" className={styles.howItWorks}>
-          <h2 className={styles.sectionTitle}>How It Works</h2>
+          <div className={styles.sectionLabel}>How It Works</div>
+          <h2 className={styles.sectionTitle}>Three steps.<br />That's it.</h2>
           <div className={styles.stepsGrid}>
-            <div className={styles.stepCard} style={{background:'#fff',border:'1px solid var(--border)',borderRadius:'20px',padding:'2rem'}}>
-              <span className={styles.stepNumber}>1</span>
-              <div className={styles.stepContent}>
-                <h3 className={styles.featureTitle}>Start the Server</h3>
-                <p className={styles.featureDesc}>
-                  Open AnyShare and tap Start. The app spins up a secure local HTTP server and shows you the URL to connect.
-                </p>
+            {steps.map((s) => (
+              <div key={s.n} className={styles.stepCard}>
+                <span className={styles.stepNumber}>{s.n}</span>
+                <h3 className={styles.stepTitle}>{s.title}</h3>
+                <p className={styles.featureDesc}>{s.desc}</p>
               </div>
-            </div>
-            <div className={styles.stepCard} style={{background:'#fff',border:'1px solid var(--border)',borderRadius:'20px',padding:'2rem'}}>
-              <span className={styles.stepNumber}>2</span>
-              <div className={styles.stepContent}>
-                <h3 className={styles.featureTitle}>Connect Any Device</h3>
-                <p className={styles.featureDesc}>
-                  Connect to the same Wi-Fi or hotspot, then open the URL in any browser. No app install needed on the receiving device.
-                </p>
-              </div>
-            </div>
-            <div className={styles.stepCard} style={{background:'#fff',border:'1px solid var(--border)',borderRadius:'20px',padding:'2rem'}}>
-              <span className={styles.stepNumber}>3</span>
-              <div className={styles.stepContent}>
-                <h3 className={styles.featureTitle}>Transfer Files</h3>
-                <p className={styles.featureDesc}>
-                  Browse, preview, and download shared files. Or upload files from the browser back to your phone. It&apos;s that simple.
-                </p>
-              </div>
-            </div>
+            ))}
           </div>
         </section>
 
-        {/* OPEN SOURCE SECTION */}
+        {/* OPEN SOURCE */}
         <section className={styles.openSource}>
           <div className={styles.openSourceCard}>
-            <h2 className={`${styles.sectionTitle} ${styles.openSourceTitle}`}>100% Free &amp; Open Source</h2>
+            <div className={styles.openSourceLabel}>Open Source</div>
+            <h2 className={styles.openSourceHeading}>Built for everyone.<br />Free forever.</h2>
             <p className={styles.openSourceDesc}>
-              No ads, no trackers, no hidden subscriptions. AnyShare is built for the community, by the community. The entire source code is available under the Apache License 2.0.
+              No ads. No trackers. No subscriptions. AnyShare is open source under the Apache License 2.0.
             </p>
-            <div className={styles.buttonGroup} style={{ justifyContent: "center" }}>
+            <div className={styles.buttonGroup}>
               <a href="https://github.com/Kaifazad/AnyShare" target="_blank" rel="noopener noreferrer" className={styles.openSourceBtn}>
                 <GithubIcon /> View on GitHub
               </a>
               <a href="https://github.com/Kaifazad/AnyShare/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer" className={styles.openSourceBtn}>
-                Become a Contributor
+                Contribute
               </a>
             </div>
           </div>
@@ -284,7 +219,7 @@ export default function Home() {
             <Link href="/privacy">Privacy Policy</Link>
             <a href="https://github.com/Kaifazad/AnyShare/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">Contributing</a>
           </div>
-          <p>&copy; {new Date().getFullYear()} Developed by <a href="https://kaifazad.in" target="_blank" rel="noopener noreferrer" style={{textDecoration: 'underline'}}>Kaif Azad</a>. Open Source under the Apache License 2.0.</p>
+          <p>&copy; {new Date().getFullYear()} Developed by <a href="https://kaifazad.in" target="_blank" rel="noopener noreferrer" className={styles.footerAuthor}>Kaif Azad</a>. Apache License 2.0.</p>
         </div>
       </footer>
     </div>
