@@ -1,8 +1,10 @@
+'use client';
+import { useState } from 'react';
 import styles from "./page.module.css";
 import Link from "next/link";
 
 const DownloadIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
     <polyline points="7 10 12 15 17 10"></polyline>
     <line x1="12" y1="15" x2="12" y2="3"></line>
@@ -10,15 +12,8 @@ const DownloadIcon = () => (
 );
 
 const GithubIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
-  </svg>
-);
-
-const PhoneIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
-    <line x1="12" y1="18" x2="12.01" y2="18"></line>
   </svg>
 );
 
@@ -43,18 +38,23 @@ const SecureIcon = () => (
   </svg>
 );
 
-const DesignIcon = () => (
-  <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M12 19l7-7 3 3-7 7-3-3z"></path>
-    <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path>
-    <path d="M2 2l7.586 7.586"></path>
-    <circle cx="11" cy="11" r="2"></circle>
-  </svg>
-);
-
 const ShieldIcon = () => (
   <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+  </svg>
+);
+
+const PhoneIcon = () => (
+  <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+    <line x1="12" y1="18" x2="12.01" y2="18"></line>
+  </svg>
+);
+
+const DesignIcon = () => (
+  <svg width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="3"></circle>
+    <path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"></path>
   </svg>
 );
 
@@ -66,23 +66,67 @@ const UploadIcon = () => (
   </svg>
 );
 
+const MenuIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="3" y1="6" x2="21" y2="6"></line>
+    <line x1="3" y1="12" x2="21" y2="12"></line>
+    <line x1="3" y1="18" x2="21" y2="18"></line>
+  </svg>
+);
+
+const CloseIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="18" y1="6" x2="6" y2="18"></line>
+    <line x1="6" y1="6" x2="18" y2="18"></line>
+  </svg>
+);
+
 export default function Home() {
+  const [menuOpen, setMenuOpen] = useState(false);
+
   return (
     <div className={styles.container}>
       {/* NAVIGATION */}
       <nav className={styles.nav}>
         <div className={styles.navInner}>
           <Link href="/" className={styles.navLogo}>
-            <img src="/logo.png" alt="AnyShare Logo" width="32" height="32" style={{ marginRight: '8px' }} />
+            <img src="/logo.png" alt="AnyShare" width="32" height="32" style={{ borderRadius: '8px' }} />
             <span>AnyShare</span>
           </Link>
+
+          {/* Desktop links */}
           <div className={styles.navLinks}>
             <a href="#features">Features</a>
             <a href="#how-it-works">How It Works</a>
             <Link href="/privacy">Privacy</Link>
             <a href="https://github.com/Kaifazad/AnyShare" target="_blank" rel="noopener noreferrer">GitHub</a>
+            <a href="https://github.com/Kaifazad/AnyShare/releases/latest" target="_blank" rel="noopener noreferrer" className={styles.navCta}>
+              Download APK
+            </a>
           </div>
+
+          {/* Mobile hamburger */}
+          <button
+            className={styles.hamburger}
+            onClick={() => setMenuOpen(!menuOpen)}
+            aria-label="Toggle menu"
+          >
+            {menuOpen ? <CloseIcon /> : <MenuIcon />}
+          </button>
         </div>
+
+        {/* Mobile drawer */}
+        {menuOpen && (
+          <div className={styles.mobileMenu}>
+            <a href="#features" onClick={() => setMenuOpen(false)}>Features</a>
+            <a href="#how-it-works" onClick={() => setMenuOpen(false)}>How It Works</a>
+            <Link href="/privacy" onClick={() => setMenuOpen(false)}>Privacy</Link>
+            <a href="https://github.com/Kaifazad/AnyShare" target="_blank" rel="noopener noreferrer" onClick={() => setMenuOpen(false)}>GitHub</a>
+            <a href="https://github.com/Kaifazad/AnyShare/releases/latest" target="_blank" rel="noopener noreferrer" className={styles.navCta} onClick={() => setMenuOpen(false)}>
+              Download APK
+            </a>
+          </div>
+        )}
       </nav>
 
       <main className={styles.main}>
@@ -102,7 +146,7 @@ export default function Home() {
               <DownloadIcon /> Download APK
             </a>
             <a href="https://github.com/Kaifazad/AnyShare" target="_blank" rel="noopener noreferrer" className={styles.secondaryButton}>
-              <GithubIcon /> View Source
+              <GithubIcon /> View on GitHub
             </a>
           </div>
           <div className={styles.heroVisual}>
@@ -214,15 +258,15 @@ export default function Home() {
         {/* OPEN SOURCE SECTION */}
         <section className={styles.openSource}>
           <div className={styles.openSourceCard}>
-            <h2 className={styles.sectionTitle}>100% Free &amp; Open Source</h2>
-            <p>
+            <h2 className={`${styles.sectionTitle} ${styles.openSourceTitle}`}>100% Free &amp; Open Source</h2>
+            <p className={styles.openSourceDesc}>
               No ads, no trackers, no hidden subscriptions. AnyShare is built for the community, by the community. The entire source code is available under the Apache License 2.0.
             </p>
             <div className={styles.buttonGroup} style={{ justifyContent: "center" }}>
-              <a href="https://github.com/Kaifazad/AnyShare" target="_blank" rel="noopener noreferrer" className={styles.secondaryButton}>
+              <a href="https://github.com/Kaifazad/AnyShare" target="_blank" rel="noopener noreferrer" className={styles.openSourceBtn}>
                 <GithubIcon /> View on GitHub
               </a>
-              <a href="https://github.com/Kaifazad/AnyShare/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer" className={styles.secondaryButton}>
+              <a href="https://github.com/Kaifazad/AnyShare/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer" className={styles.openSourceBtn}>
                 Become a Contributor
               </a>
             </div>
@@ -240,7 +284,7 @@ export default function Home() {
             <Link href="/privacy">Privacy Policy</Link>
             <a href="https://github.com/Kaifazad/AnyShare/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">Contributing</a>
           </div>
-          <p>&copy; {new Date().getFullYear()} Developed by <a href="https://kaifazad.in" target="_blank" rel="noopener noreferrer" style={{textDecoration: 'underline', color: 'var(--foreground)'}}>Kaif Azad</a>. Open Source under the Apache License 2.0.</p>
+          <p>&copy; {new Date().getFullYear()} Developed by <a href="https://kaifazad.in" target="_blank" rel="noopener noreferrer" style={{textDecoration: 'underline'}}>Kaif Azad</a>. Open Source under the Apache License 2.0.</p>
         </div>
       </footer>
     </div>
