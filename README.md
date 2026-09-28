@@ -1,110 +1,110 @@
 <div align="center">
-  <img src="app/src/main/res/drawable/logo.png" alt="AnyShare Logo" width="120"/>
-  <h1>AnyShare - Stream</h1>
-  <p><strong>Blazing-fast, offline file sharing for Android — no internet, no cloud, no tracking. Stream your movies locally.</strong></p>
+  <img src="docs/logo.png" alt="AnyShare Logo" width="110"/>
+  <h1>AnyShare</h1>
+  <p><strong>Blazing-fast, private local Wi-Fi file sharing & media streaming for Android. No internet, no cloud, zero tracking.</strong></p>
 
   <p>
     <a href="https://github.com/Kaifazad/AnyShare/releases/latest">
-      <img src="https://img.shields.io/badge/⬇️%20Download-Latest%20Release-0070F3?style=for-the-badge" alt="Download Latest Release"/>
+      <img src="https://img.shields.io/badge/Download-Latest%20APK-2563EB?style=for-the-badge&logo=android&logoColor=white" alt="Download Latest Release"/>
     </a>
-    <img src="https://img.shields.io/badge/▶️%20Google%20Play-Coming%20Soon-black?style=for-the-badge&logo=googleplay" alt="Coming Soon on Play Store"/>
-  </p>
-
-  <p>
-    <img src="https://img.shields.io/badge/Platform-Android%208.0%2B-3DDC84?style=for-the-badge&logo=android" alt="Platform: Android 8.0+"/>
-    <img src="https://img.shields.io/badge/Language-Kotlin-7F52FF?style=for-the-badge&logo=kotlin" alt="Language: Kotlin"/>
-    <img src="https://img.shields.io/github/license/Kaifazad/AnyShare?style=for-the-badge&color=blue" alt="License: Apache 2.0"/>
+    <img src="https://img.shields.io/badge/Speed-Up%20to%2050%20MB%2Fs-10B981?style=for-the-badge" alt="Speed: Up to 50 MB/s"/>
+    <img src="https://img.shields.io/badge/Platform-Android%208.0%2B-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Platform: Android 8.0+"/>
+    <img src="https://img.shields.io/badge/Language-Kotlin-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white" alt="Language: Kotlin"/>
   </p>
 </div>
 
 ---
 
-**AnyShare** is a free, open-source Android app that lets you share files with any device on your local network — no internet required. Your phone hosts a clean web server; anyone on the same Wi-Fi opens a browser, types the URL, and downloads or uploads files instantly. No app needed on the other end.
+## ⚡ What is AnyShare?
+
+**AnyShare** turns your Android device into a high-speed local streaming and transfer station. Simply connect your devices to the same local Wi-Fi network (or mobile hotspot), start the server, and browse, download, or stream your library directly from any desktop or mobile browser.
+
+- **Zero Software on PC / Laptop**: Any browser (Chrome, Safari, Edge, Firefox) connects instantly via local IP.
+- **100% Offline & Off-Grid**: Transfers run over your local Wi-Fi router or phone hotspot at direct network speeds — zero internet data usage.
+- **No Cloud Middlemen**: Your personal photos, videos, and documents stay strictly inside your physical room.
 
 ---
 
-## 📸 Screenshots
+## 📱 Screenshots
 
 <div align="center">
   <table>
     <tr>
-      <td align="center">
-        <img src="docs/screenshots/screenshot_home.png" alt="Home Screen" width="220"/>
-        <br/><sub><b>Home Screen</b></sub>
+      <td align="center" width="25%">
+        <img src="docs/screenshots/screenshot_home.png" alt="Home Screen" width="210"/>
+        <br/><sub><b>Home & Server Control</b></sub>
       </td>
-      <td align="center">
-        <img src="docs/screenshots/screenshot_files.png" alt="Shared Files" width="220"/>
-        <br/><sub><b>Shared Files</b></sub>
+      <td align="center" width="25%">
+        <img src="docs/screenshots/screenshot_files.png" alt="Shared Files" width="210"/>
+        <br/><sub><b>Shared Library</b></sub>
       </td>
-      <td align="center">
-        <img src="docs/screenshots/screenshot_webui.png" alt="Web UI" width="220"/>
-        <br/><sub><b>Web UI (Browser)</b></sub>
+      <td align="center" width="25%">
+        <img src="docs/screenshots/screenshot_setting.png" alt="App Settings" width="210"/>
+        <br/><sub><b>Security & Settings</b></sub>
+      </td>
+      <td align="center" width="25%">
+        <img src="docs/screenshots/screenshot_webui.png" alt="Web UI" width="210"/>
+        <br/><sub><b>Browser Desktop UI</b></sub>
       </td>
     </tr>
   </table>
 </div>
 
-> **To add screenshots:** Create a `docs/screenshots/` folder in the repo root and add `screenshot_home.png`, `screenshot_files.png`, and `screenshot_webui.png`.
-
 ---
 
-## ✨ Features
+## ✨ Key Features
 
-- 🚀 **Blazing Fast** — Transfers run at full local Wi-Fi speed with no internet routing or cloud middlemen
-- 🌐 **Universal Web UI** — Any browser on any device (PC, iPhone, tablet) can browse, download, and upload files
-- 🖱️ **Drag & Drop Upload** — On desktop, drag files straight into the browser to send them to your phone
-- 🔒 **PIN Protection** — Optional 4-digit PIN locks your server so only trusted devices connect
-- 🔐 **End-to-End Encryption** — Optional AES-256-GCM encryption for extra-sensitive transfers
-- 📱 **Deep Android Integration** — Share from any app via the native Share Menu; Quick Settings Tile & Home Screen Widget
-- 📺 **In-Browser Streaming** — Stream video and audio directly in the browser without downloading
-- 📂 **Share Anything** — Files, folders, multiple items, APKs, and clipboard text
-- 🎨 **Material You Design** — Dynamic colors, dark mode, smooth animations built with Jetpack Compose
-
----
-
-## 📥 Download
-
-1. Download the APK from the Releases page
-2. Open the file on your Android phone
-3. Enable **"Install from unknown sources"** if prompted and install
-
-**Minimum:** Android 8.0 (API 26)
+- **🚀 Blazing Transfer Speeds**: Peer-to-peer Wi-Fi throughput up to 50 MB/s without cable or Bluetooth bottlenecks.
+- **🖥️ Universal Web Interface**: Clean, dark-mode browser portal for laptops and PCs with file previews, search, and batch downloads.
+- **🎬 In-Browser Media Streaming**: Stream 4K video and music without downloading, complete with letterbox scaling and audio track switching.
+- **📋 Bi-directional Clipboard Sync**: Live clipboard synchronization — send text from phone to laptop or paste from laptop directly to phone.
+- **📥 Drag & Drop File Uploads**: Drag files from your computer screen directly into the browser to upload them to your phone.
+- **🔒 Privacy by Design**:
+  - Uses native Android Photo & Document Pickers (no broad gallery/storage permissions needed).
+  - Optional 4-digit security PIN to lock access to authorized devices.
+  - Optional hardware-accelerated **AES-256-GCM** encryption.
+- **🔋 Screen-Off Stability**: Robust foreground service with `WifiLock` and partial wake lock prevents Android battery savers from dropping connections mid-transfer.
 
 ---
 
 ## 🛠️ How It Works
 
-1. **Start the server** — Open AnyShare and tap the Start button. The app shows you a local URL (e.g. `http://192.168.1.5:8080`)
-2. **Connect** — Make sure the receiving device is on the same Wi-Fi or hotspot
-3. **Open the browser** — Type the URL into any browser on the receiving device
-4. **Transfer files** — Browse and download shared files, or drag & drop files to upload back to your phone
+```mermaid
+graph LR
+    Phone["Android Device<br/>(AnyShare Engine)"]
+    Router["Local Wi-Fi Network<br/>/ Mobile Hotspot"]
+    Laptop["Any Browser<br/>(Windows / Mac / Linux)"]
+
+    Phone <-->|HTTP / WebSocket / 50MB/s| Router
+    Router <-->|Stream & Transfer| Laptop
+```
+
+1. **Start AnyShare**: Open the app on your phone and tap **Start Server**. The app displays your local URL (e.g., `http://192.168.0.237:8080`).
+2. **Open in Browser**: On your laptop, PC, or tablet, open your browser and navigate to the URL.
+3. **Stream & Share**: Click any video or photo to stream instantly, download single files or full zip archives, and drag-and-drop to upload.
 
 ---
 
-## 💻 Tech Stack
+## 💻 Tech Architecture
 
-| Layer | Technology |
+| Component | Implementation |
 |---|---|
-| Language | 100% Kotlin |
-| UI | Jetpack Compose + Material 3 (Material You) |
-| Architecture | MVVM + Kotlin Coroutines & Flow |
-| Local Server | NanoHTTPD (embedded HTTP server) |
-| Encryption | AES-256-GCM (end-to-end) |
-| Preferences | DataStore |
-| Media | Coil (images) + Media3 ExoPlayer (video) |
-| Web UI | Vanilla HTML / CSS / JS |
+| **Platform** | Native Android (API 26+ / Android 8.0 to Android 15+) |
+| **Language** | 100% Kotlin |
+| **UI Framework** | Jetpack Compose + Material 3 Design System |
+| **Async & Flow** | Kotlin Coroutines + StateFlow / SharedFlow |
+| **Local Web Engine** | High-performance embedded HTTP socket server with range requests |
+| **Media Engine** | Media3 ExoPlayer & HTML5 Web Audio/Video API |
+| **Encryption** | Web Crypto API + Java Cryptography Extension (AES-256-GCM) |
+| **Web Frontend** | Vanilla HTML5, CSS3 Glassmorphism, Modern ES6+ JavaScript |
 
 ---
 
-## 🤝 Contributing
+## 📥 Installation
 
-Contributions, issues, and feature requests are welcome! Check the [issues page](https://github.com/Kaifazad/AnyShare/issues) or read [CONTRIBUTING.md](CONTRIBUTING.md).
-
-1. Fork the repo
-2. Create a feature branch: `git checkout -b feature/my-feature`
-3. Commit your changes: `git commit -m 'Add my feature'`
-4. Push: `git push origin feature/my-feature`
-5. Open a Pull Request
+1. Grab the latest APK from the [Releases](https://github.com/Kaifazad/AnyShare/releases/latest) section.
+2. Open the `.apk` on your Android device and confirm installation.
+3. Launch AnyShare and start sharing!
 
 ---
 
@@ -117,6 +117,6 @@ Contributions, issues, and feature requests are welcome! Check the [issues page]
 
 ---
 
-## 📝 License
+## 📄 License
 
 Distributed under the Apache License 2.0. See [LICENSE](LICENSE) for details.
